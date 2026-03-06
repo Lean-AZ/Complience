@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Evaluación: campos de variables y semáforo solo lectura (se autocompletan desde el formulario/encuesta) -->
+    <record id="view_compliance_assessment_form" model="ir.ui.view">
+        <field name="name">compliance.assessment.form</field>
+        <field name="model">compliance.assessment</field>
+        <field name="arch" type="xml">
+            <form string="Evaluación PLAFT">
+                <header>
+                    <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn-secondary" invisible="not partner_id"/>
+                    <button name="action_approve" string="Aprobar Cliente" type="object" class="oe_highlight" invisible="state == 'approved'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="partner_id" placeholder="Cliente..."/></h1>
+                        <h3><field name="name" readonly="1"/></h3>
+                    </div>
+                    <group string="Alertas activas" invisible="not risk_alert_message" class="oe_alert_box">
+                        <field name="risk_alert_message" nolabel="1" readonly="1" class="oe_inline"/>
+                    </group>
+                    <group>
+                        <group string="Cuentagotas (Variables)">
+                            <field name="profile_id" placeholder="Perfil de umbrales (opcional)..."/>
+                            <field name="origin_funds_score" readonly="1"/>
+                            <field name="economic_activity_score" readonly="1"/>
+                            <field name="pep_score" readonly="1"/>
+                            <field name="nationality_score" readonly="1"/>
+                            <field name="transaction_bulto_score" readonly="1"/>
+                        </group>
+                        <group string="Semáforo de Riesgo">
+                            <field name="risk_score" widget="gauge" options="{'max_field': '100'}" readonly="1"/>
+                            <field name="risk_level" widget="badge" decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'" decoration-success="risk_level == 'low'" readonly="1"/>
+                            <field name="ai_penalty" string="🔥 Castigo IA" readonly="1"/>
+                            <field name="transaccional_volume" readonly="1"/>
+                            <field name="transfer_count" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="🤖 IA info" name="ai_info">
+                            <field name="ai_report" placeholder="Aquí aparecerá el resumen de la investigación..." readonly="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_compliance_assessment_tree" model="ir.ui.view">
+        <field name="name">compliance.assessment.tree</field>
+        <field name="model">compliance.assessment</field>
+        <field name="arch" type="xml">
+            <tree decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="risk_score" widget="badge" decoration-danger="risk_level == 'high'"/>
+                <field name="risk_level" column_invisible="True"/> <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_compliance_assessment" model="ir.actions.act_window">
+        <field name="name">Evaluaciones PLAFT</field>
+        <field name="res_model">compliance.assessment</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <!-- Configuración de umbrales: personalizable por el cliente/operador desde la UI -->
+    <record id="view_compliance_risk_profile_form" model="ir.ui.view">
+        <field name="name">compliance.risk.profile.form</field>
+        <field name="model">compliance.risk.profile</field>
+        <field name="arch" type="xml">
+            <form string="Perfil de umbrales">
+                <sheet>
+                    <group>
+                        <group string="Identificación">
+                            <field name="name"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active"/>
+                        </group>
+                        <group string="Umbrales (editables por el operador)">
+                            <field name="volume_limit_usd"/>
+                            <field name="transfer_count_limit"/>
+                            <field name="score_threshold_medium"/>
+                            <field name="score_threshold_high"/>
+                        </group>
+                        <group string="Pesos del score (suman idealmente 1.0)">
+                            <field name="weight_origin_funds"/>
+                            <field name="weight_economic_activity"/>
+                            <field name="weight_pep"/>
+                            <field name="weight_nationality"/>
+                            <field name="weight_transaction_bulto"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_compliance_risk_profile_tree" model="ir.ui.view">
+        <field name="name">compliance.risk.profile.tree</field>
+        <field name="model">compliance.risk.profile</field>
+        <field name="arch" type="xml">
+            <tree decoration-muted="not active">
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="volume_limit_usd"/>
+                <field name="transfer_count_limit"/>
+                <field name="score_threshold_medium"/>
+                <field name="score_threshold_high"/>
+                <field name="active"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_compliance_risk_profile" model="ir.actions.act_window">
+        <field name="name">Umbrales de riesgo</field>
+        <field name="res_model">compliance.risk.profile</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>Configure aquí los umbrales por perfil (ej. Constructora, Dealer).</p>
+            <p>Por ejemplo: una constructora puede tener límite de volumen 400,000 USD; un operador puede modificar estos valores en cualquier momento.</p>
+        </field>
+    </record>
+
+    <!-- Parámetros de riesgo: por país, banco o cliente -->
+    <record id="view_compliance_risk_parameter_form" model="ir.ui.view">
+        <field name="name">compliance.risk.parameter.form</field>
+        <field name="model">compliance.risk.parameter</field>
+        <field name="arch" type="xml">
+            <form string="Parámetro de riesgo">
+                <sheet>
+                    <group>
+                        <field name="active"/>
+                        <field name="name"/>
+                        <field name="parameter_type"/>
+                    </group>
+                    <group string="Objeto al que aplica">
+                        <field name="country_id" invisible="parameter_type != 'country'"/>
+                        <field name="bank_id" invisible="parameter_type != 'bank'"/>
+                        <field name="partner_id" invisible="parameter_type != 'partner'"/>
+                    </group>
+                    <group string="Riesgo">
+                        <field name="base_score"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_compliance_risk_parameter_tree" model="ir.ui.view">
+        <field name="name">compliance.risk.parameter.tree</field>
+        <field name="model">compliance.risk.parameter</field>
+        <field name="arch" type="xml">
+            <tree decoration-muted="not active">
+                <field name="active"/>
+                <field name="parameter_type"/>
+                <field name="country_id"/>
+                <field name="bank_id"/>
+                <field name="partner_id"/>
+                <field name="base_score"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="action_compliance_risk_parameter" model="ir.actions.act_window">
+        <field name="name">Parámetros de riesgo</field>
+        <field name="res_model">compliance.risk.parameter</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>Configure aquí ajustes de riesgo adicionales por país, banco o cliente específico.</p>
+            <p>Por ejemplo: un banco de alto riesgo puede tener 5/5 puntos adicionales y ciertos países otros 3/5.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_compliance_root" name="Compliance" sequence="10"/>
+    <menuitem id="menu_compliance_assessment" name="Evaluaciones" parent="menu_compliance_root" action="action_compliance_assessment"/>
+    <menuitem id="menu_compliance_config" name="Configuración" parent="menu_compliance_root" sequence="100"/>
+    <menuitem id="menu_compliance_risk_profile" name="Umbrales de riesgo" parent="menu_compliance_config" action="action_compliance_risk_profile"/>
+    <menuitem id="menu_compliance_risk_parameter" name="Parámetros de riesgo" parent="menu_compliance_config" action="action_compliance_risk_parameter"/>
+</odoo>

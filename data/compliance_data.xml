@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="seq_compliance_assessment" model="ir.sequence">
+            <field name="name">Secuencia de Evaluación PLAFT</field>
+            <field name="code">compliance.assessment</field>
+            <field name="prefix">EVAL-</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="param_dealer_cash_limit" model="ir.config_parameter">
+            <field name="key">ghr_compliance.dealer_cash_limit</field>
+            <field name="value">15000</field>
+        </record>
+
+        <!-- Perfiles de umbrales por defecto: el operador puede modificarlos desde Compliance > Configuración -->
+        <record id="profile_default" model="compliance.risk.profile">
+            <field name="name">Default</field>
+            <field name="volume_limit_usd">15000</field>
+            <field name="transfer_count_limit">3</field>
+            <field name="score_threshold_medium">36</field>
+            <field name="score_threshold_high">71</field>
+        </record>
+        <record id="profile_constructora" model="compliance.risk.profile">
+            <field name="name">Constructora</field>
+            <field name="volume_limit_usd">400000</field>
+            <field name="transfer_count_limit">3</field>
+            <field name="score_threshold_medium">36</field>
+            <field name="score_threshold_high">71</field>
+        </record>
+        <record id="profile_dealer" model="compliance.risk.profile">
+            <field name="name">Dealer</field>
+            <field name="volume_limit_usd">15000</field>
+            <field name="transfer_count_limit">3</field>
+            <field name="score_threshold_medium">36</field>
+            <field name="score_threshold_high">71</field>
+        </record>
+    </data>
+
+    <data>
+        <record id="q_origen_efectivo" model="compliance.question">
+            <field name="name">¿El origen de los fondos es efectivo de fuentes no declaradas?</field>
+            <field name="category">ambos</field>
+            <field name="weight">10</field>
+        </record>
+
+        <record id="q_pep_directo" model="compliance.question">
+            <field name="name">¿El cliente es una Persona Expuesta Políticamente (PEP)?</field>
+            <field name="category">ambos</field>
+            <field name="weight">8</field>
+        </record>
+    </data>
+</odoo>
