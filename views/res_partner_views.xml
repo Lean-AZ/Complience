@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_compliance" model="ir.ui.view">
+        <field name="name">res.partner.form.compliance</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Cumplimiento" name="compliance">
+                    <group>
+                        <button name="action_new_compliance_assessment" string="Nueva evaluación PLAFT" type="object" class="btn-primary"/>
+                    </group>
+                    <field name="compliance_assessment_ids" readonly="1" nolabel="1">
+                        <tree decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'" create="0" delete="0">
+                            <field name="name"/>
+                            <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'"/>
+                            <field name="risk_level" widget="badge"/>
+                            <field name="risk_score"/>
+                            <field name="create_date"/>
+                        </tree>
+                    </field>
+                    <group string="Datos KYC (desde encuesta o manual)">
+                        <group>
+                            <field name="occupation"/>
+                            <field name="origin_funds"/>
+                            <field name="is_pep"/>
+                            <field name="nationality_country_id"/>
+                        </group>
+                        <group>
+                            <field name="monthly_salary"/>
+                            <field name="other_income"/>
+                            <field name="compliance_notes"/>
+                        </group>
+                    </group>
+                    <field name="last_compliance_assessment_id" invisible="1"/>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

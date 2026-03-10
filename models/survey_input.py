@@ -99,5 +99,77 @@ class SurveyUserInput(models.Model):
                 if vals:
                     assessment.write(vals)
                     assessment.message_post(body=_("✅ Score y volúmenes actualizados automáticamente desde la Encuesta de Debida Diligencia."))
-        
+                if response.survey_id and not assessment.survey_id:
+                    assessment.survey_id = response.survey_id
+                # Notificación al oficial de cumplimiento
+                if assessment.compliance_officer_id:
+                    assessment.message_post(
+                        body=_("Encuesta completada por el cliente. Revise la evaluación."),
+                        message_type="notification",
+                        subtype_xmlid="mail.mt_comment",
+                        partner_ids=assessment.compliance_officer_id.partner_id.ids,
+                    )
+
+                # Sincronización a res.partner: campos KYC inferidos de las respuestas
+                partner_vals = {}
+                for line in response.user_input_line_ids:
+                    title = (line.question_id.title or '').strip().lower()
+                    text_val = (getattr(line, 'value_char_box', None) or getattr(line, 'value_text_box', None) or '')
+                    if isinstance(text_val, str):
+                        text_val = text_val.strip()
+                    else:
+                        text_val = ''
+
+                    if any(k in title for k in ['ocupación', 'cargo', 'profesión']) and text_val:
+                        partner_vals['occupation'] = text_val[:500] if len(text_val) > 500 else text_val
+                    if any(k in title for k in ['origen', 'fondos', 'recursos']) and text_val:
+                        partner_vals['origin_funds'] = text_val[:2000] if len(text_val) > 2000 else text_val
+                    if any(k in title for k in ['pep', 'persona expuesta']) and line.answer_score and line.answer_score >= 7:
+                        partner_vals['is_pep'] = True
+
+                if partner_vals and response.partner_id:
+                    response.partner_id.write(partner_vals)
+
+                # Mapeo configurable: compliance.question.mapping por título y form_type
+                form_type = assessment.form_type or 'automotriz_pf'
+                Mapping = response.env['compliance.question.mapping'].sudo()
+                for line in response.user_input_line_ids:
+                    title = (line.question_id.title or '').strip().lower()
+                    if not title:
+                        continue
+                    mappings = Mapping.search([
+                        '|', ('form_type', '=', form_type), ('form_type', '=', 'ambos'),
+                    ])
+                    for m in mappings:
+                        key = (m.survey_question_title or '').strip().lower()
+                        if key and key not in title:
+                            continue
+                        dest_field = (m.destination_field or '').strip()
+                        if not dest_field:
+                            continue
+                        if m.destination_model == 'assessment':
+                            target = assessment
+                        else:
+                            target = response.partner_id
+                        if not target:
+                            continue
+                        if dest_field not in target._fields:
+                            continue
+                        f = target._fields[dest_field]
+                        raw = None
+                        if f.type in ('integer', 'float'):
+                            raw = getattr(line, 'answer_score', None)
+                            if raw is None and getattr(line, 'value_numerical_box', None) is not None:
+                                try:
+                                    raw = float(line.value_numerical_box) if f.type == 'float' else int(line.value_numerical_box)
+                                except (TypeError, ValueError):
+                                    pass
+                        else:
+                            raw = getattr(line, 'value_char_box', None) or getattr(line, 'value_text_box', None)
+                            raw = (raw or '').strip() if isinstance(raw, str) else (str(raw) if raw else '')
+                        if raw is not None and raw != '':
+                            try:
+                                target.write({dest_field: raw})
+                            except (TypeError, ValueError):
+                                pass
         return res

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_compliance_question_tree" model="ir.ui.view">
+        <field name="name">compliance.question.tree</field>
+        <field name="model">compliance.question</field>
+        <field name="arch" type="xml">
+            <tree editable="bottom" default_order="sequence, id">
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="form_type"/>
+                <field name="category"/>
+                <field name="weight"/>
+                <field name="is_scorable"/>
+                <field name="destination_field" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+    <record id="view_compliance_question_form" model="ir.ui.view">
+        <field name="name">compliance.question.form</field>
+        <field name="model">compliance.question</field>
+        <field name="arch" type="xml">
+            <form string="Pregunta de cumplimiento">
+                <sheet>
+                    <group>
+                        <group string="Pregunta">
+                            <field name="name" placeholder="Ej: ¿Cuál es el origen de los fondos?"/>
+                            <field name="sequence"/>
+                            <field name="weight"/>
+                            <field name="is_scorable"/>
+                            <field name="destination_field" invisible="1"/>
+                        </group>
+                        <group string="Ámbito">
+                            <field name="form_type"/>
+                            <field name="category"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_compliance_question" model="ir.actions.act_window">
+        <field name="name">Preguntas de cumplimiento</field>
+        <field name="res_model">compliance.question</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>Lista de preguntas que puede usar como referencia al armar la encuesta. Cada pregunta puede asociarse a un tipo de formulario (Inmobiliario/Automotriz, persona física o jurídica). Para indicar <strong>dónde</strong> se guarda la respuesta cuando el cliente responda, use el menú <strong>Dónde se guarda cada respuesta</strong>.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_compliance_question" name="Preguntas de cumplimiento" parent="menu_compliance_config" action="action_compliance_question" sequence="5"/>
+
+    <!-- Dónde se guarda cada respuesta (sin jerga modelo/campo) -->
+    <record id="view_compliance_question_mapping_tree" model="ir.ui.view">
+        <field name="name">compliance.question.mapping.tree</field>
+        <field name="model">compliance.question.mapping</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="survey_question_title"/>
+                <field name="form_type"/>
+                <field name="destination_key"/>
+                <field name="destination_model" column_invisible="1"/>
+                <field name="destination_field" column_invisible="1"/>
+            </tree>
+        </field>
+    </record>
+    <record id="view_compliance_question_mapping_form" model="ir.ui.view">
+        <field name="name">compliance.question.mapping.form</field>
+        <field name="model">compliance.question.mapping</field>
+        <field name="arch" type="xml">
+            <form string="Dónde se guarda esta respuesta">
+                <sheet>
+                    <group>
+                        <field name="survey_question_title" placeholder="Ej: origen de fondos"/>
+                        <field name="form_type"/>
+                        <field name="destination_key" options="{'no_create': True}"/>
+                        <field name="destination_model" invisible="1"/>
+                        <field name="destination_field" invisible="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_compliance_question_mapping" model="ir.actions.act_window">
+        <field name="name">Dónde se guarda cada respuesta</field>
+        <field name="res_model">compliance.question.mapping</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p>Indique qué palabra debe tener el título de la pregunta en la encuesta y <strong>dónde</strong> guardar la respuesta (en la evaluación o en el contacto). Así el sistema rellena automáticamente los datos cuando el cliente complete la encuesta.</p>
+        </field>
+    </record>
+    <menuitem id="menu_compliance_question_mapping" name="Dónde se guarda cada respuesta" parent="menu_compliance_config" action="action_compliance_question_mapping" sequence="6"/>
+
+</odoo>

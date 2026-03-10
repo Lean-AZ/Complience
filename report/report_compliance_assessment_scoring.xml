@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_compliance_assessment_scoring">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Informe de scoring PLAFT</h2>
+                        <p><strong>Evaluación:</strong> <t t-esc="o.name"/></p>
+                        <p><strong>Cliente:</strong> <t t-esc="o.partner_id.name"/></p>
+                        <p><strong>Fecha:</strong> <t t-esc="context_today().strftime('%d/%m/%Y')"/></p>
+                        <table class="table table-sm">
+                            <tr><td>Puntos Origen de Fondos (1-10)</td><td><t t-esc="o.origin_funds_score"/></td></tr>
+                            <tr><td>Puntos Actividad Económica (1-10)</td><td><t t-esc="o.economic_activity_score"/></td></tr>
+                            <tr><td>Puntos PEP (0-10)</td><td><t t-esc="o.pep_score"/></td></tr>
+                            <tr><td>Puntos Nacionalidad (1-10)</td><td><t t-esc="o.nationality_score"/></td></tr>
+                            <tr><td>Puntos Transacción Bulto (1-10)</td><td><t t-esc="o.transaction_bulto_score"/></td></tr>
+                            <tr><td>Volumen mensual (USD)</td><td><t t-esc="int(o.transaccional_volume) if o.transaccional_volume else 0"/></td></tr>
+                            <tr><td>Cantidad de transferencias</td><td><t t-esc="o.transfer_count or 0"/></td></tr>
+                            <tr><td><strong>Score total (0-100)</strong></td><td><strong><t t-esc="'%.1f' % o.risk_score"/></strong></td></tr>
+                            <tr><td><strong>Nivel de riesgo</strong></td><td><strong><t t-esc="dict(low='Bajo (Verde)', medium='Medio (Amarillo)', high='Alto (Rojo)').get(o.risk_level, o.risk_level)"/></strong></td></tr>
+                        </table>
+                        <div t-if="o.risk_alert_message" class="alert alert-warning" t-field="o.risk_alert_message" t-options='{"widget": "html"}'/>
+                        <h3>Resumen dictamen IA</h3>
+                        <div t-if="o.ai_report" t-field="o.ai_report" t-options='{"widget": "html"}'/>
+                        <p t-if="not o.ai_report">Sin dictamen generado.</p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+    <record id="action_report_compliance_scoring" model="ir.actions.report">
+        <field name="name">Informe scoring PLAFT</field>
+        <field name="model">compliance.assessment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ghr_compliance.report_compliance_assessment_scoring</field>
+        <field name="report_file">ghr_compliance.report_compliance_assessment_scoring</field>
+        <field name="print_report_name">'Informe_PLAFT_%s' % (object.name or '')</field>
+    </record>
+</odoo>

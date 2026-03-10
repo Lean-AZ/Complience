@@ -1,6 +1,7 @@
 import html
 import json
 import logging
+import os
 import re
 import urllib.request
 import urllib.error
@@ -8,6 +9,17 @@ import urllib.error
 from odoo import models, fields, api, _
 
 _logger = logging.getLogger(__name__)
+
+# #region agent log
+def _debug_log(session_id, hypothesis_id, location, message, data=None):
+    try:
+        log_path = os.path.join(os.path.dirname(__file__), "..", "debug-076c93.log")
+        with open(log_path, "a", encoding="utf-8") as f:
+            import time
+            f.write(json.dumps({"sessionId": session_id, "hypothesisId": hypothesis_id, "location": location, "message": message, "data": data or {}, "timestamp": int(time.time() * 1000)}) + "\n")
+    except Exception:
+        pass
+# #endregion
 from odoo.exceptions import UserError
 
 class ComplianceAssessment(models.Model):
@@ -22,6 +34,22 @@ class ComplianceAssessment(models.Model):
         string="Perfil de umbrales",
         help="Define límites de volumen y semáforo (ej. Constructora 400k USD). Editable por el operador.",
         tracking=True,
+    )
+    form_type = fields.Selection([
+        ('inmobiliario_pf', 'Inmobiliario Persona Física'),
+        ('inmobiliario_pj', 'Inmobiliario Persona Jurídica'),
+        ('automotriz_pf', 'Automotriz (Dealer) Persona Física'),
+        ('automotriz_pj', 'Automotriz (Dealer) Persona Jurídica'),
+    ], string="Tipo de formulario KYC", default='automotriz_pf', tracking=True)
+    survey_id = fields.Many2one(
+        'survey.survey',
+        string="Encuesta asociada",
+        help="Encuesta de debida diligencia usada para esta evaluación.",
+    )
+    compliance_officer_id = fields.Many2one(
+        'res.users',
+        string="Oficial de cumplimiento",
+        help="Usuario a notificar cuando se complete la encuesta.",
     )
     state = fields.Selection([
         ('draft', 'Borrador'),
@@ -58,10 +86,27 @@ class ComplianceAssessment(models.Model):
         compute="_compute_risk_alert_message",
         sanitize=False,
     )
+    purchase_capacity_monthly = fields.Float(
+        string="Capacidad de adquisición (mensual)",
+        compute="_compute_purchase_capacity_monthly",
+        store=True,
+        help="Salario + otros ingresos del contacto (mensual).",
+    )
+
+    @api.depends('partner_id', 'partner_id.monthly_salary', 'partner_id.other_income')
+    def _compute_purchase_capacity_monthly(self):
+        for rec in self:
+            if rec.partner_id:
+                rec.purchase_capacity_monthly = (rec.partner_id.monthly_salary or 0) + (rec.partner_id.other_income or 0)
+            else:
+                rec.purchase_capacity_monthly = 0.0
 
     def _get_thresholds(self):
         """Devuelve umbrales y pesos del perfil asignado o por defecto (para score, semáforo y alertas)."""
         self.ensure_one()
+        # #region agent log
+        _debug_log("076c93", "H1", "compliance.py:_get_thresholds", "entry", {"rec_id": self.id, "profile_id": self.profile_id.id if self.profile_id else None})
+        # #endregion
         if self.profile_id:
             return {
                 'volume_limit': self.profile_id.volume_limit_usd,
@@ -89,6 +134,9 @@ class ComplianceAssessment(models.Model):
     @api.depends('origin_funds_score', 'economic_activity_score', 'pep_score', 
                  'nationality_score', 'transaction_bulto_score', 'ai_penalty', 'profile_id')
     def _compute_total_risk(self):
+        # #region agent log
+        _debug_log("076c93", "H1", "compliance.py:_compute_total_risk", "entry", {"ids": self.ids})
+        # #endregion
         for rec in self:
             th = rec._get_thresholds()
             # Cálculo ponderado con pesos configurables por perfil
@@ -145,9 +193,13 @@ class ComplianceAssessment(models.Model):
             else:
                 rec.risk_level = 'low'
 
-    @api.depends('transaccional_volume', 'origin_funds_score', 'transfer_count', 'profile_id')
+    @api.depends('transaccional_volume', 'origin_funds_score', 'transfer_count', 'profile_id',
+                 'purchase_capacity_monthly')
     def _compute_risk_alert_message(self):
         """Alertas visibles en ficha según umbrales del perfil (aunque los campos estén en solo lectura)."""
+        # #region agent log
+        _debug_log("076c93", "H4", "compliance.py:_compute_risk_alert_message", "entry", {"ids": self.ids})
+        # #endregion
         for rec in self:
             th = rec._get_thresholds()
             limit = th['volume_limit']
@@ -163,6 +215,11 @@ class ComplianceAssessment(models.Model):
             if (rec.transfer_count or 0) > transfer_limit:
                 items.append(('#8e44ad', _("Más de %s transferencias para el inicial. Posible fraccionamiento de fondos.") % transfer_limit))
 
+            # Alarma inconsistencia: monto muy superior a capacidad declarada
+            capacity = rec.purchase_capacity_monthly or 0.0
+            if capacity > 0 and volume > 0 and volume > 3 * capacity:
+                items.append(('#c0392b', _("Monto desproporcionado respecto a capacidad declarada: volumen USD %s vs capacidad mensual USD %s.") % (int(volume), int(capacity))))
+
             if items:
                 blocks = [
                     '<div style="flex:0 1 auto;min-width:220px;max-width:400px;padding:0.5rem 0.75rem;margin-right:0.5rem;border-left:4px solid %s;background:#f8f9fa;border-radius:4px;font-size:13px;line-height:1.4;writing-mode:horizontal-tb;text-align:left;word-wrap:break-word;">%s</div>' % (color, text)
@@ -175,8 +232,11 @@ class ComplianceAssessment(models.Model):
                 rec.risk_alert_message = False
 
     # 🔥 ALERTAS DE RIESGO (usan umbrales del perfil asignado) — también popup al editar
-    @api.onchange('transaccional_volume', 'origin_funds_score', 'transfer_count', 'profile_id')
+    @api.onchange('transaccional_volume', 'origin_funds_score', 'transfer_count', 'profile_id', 'purchase_capacity_monthly')
     def _onchange_risk_alerts(self):
+        # #region agent log
+        _debug_log("076c93", "H5", "compliance.py:_onchange_risk_alerts", "entry", {"rec_id": getattr(self, "id", None), "origin": getattr(self, "origin_funds_score", None)})
+        # #endregion
         th = self._get_thresholds()
         limit = th['volume_limit']
         transfer_limit = th['transfer_limit']
@@ -190,6 +250,10 @@ class ComplianceAssessment(models.Model):
 
         if (self.transfer_count or 0) > transfer_limit:
             messages.append(_("🚩 ALERTA DE PITUFEO: Más de %s transferencias para el inicial. Posible fraccionamiento de fondos.") % transfer_limit)
+
+        capacity = self.purchase_capacity_monthly or 0.0
+        if capacity > 0 and volume > 0 and volume > 3 * capacity:
+            messages.append(_("⚠️ Monto desproporcionado respecto a capacidad declarada: volumen USD %s vs capacidad mensual USD %s.") % (int(volume), int(capacity)))
 
         if messages:
             return {
@@ -256,7 +320,9 @@ FORMATO DE SALIDA REQUERIDO:
 
     def _call_gemini_api(self, api_key, prompt_text):
         """Llama a la API de Gemini y devuelve el texto generado o None si hay error."""
-        url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
+        # Usar modelo estable: gemini-2.0-flash o gemini-1.5-flash-latest evita 404 con v1beta
+        model_name = "gemini-2.0-flash"
+        url = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % model_name
         headers = {
             "Content-Type": "application/json",
             "x-goog-api-key": api_key,
@@ -277,7 +343,12 @@ FORMATO DE SALIDA REQUERIDO:
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, urllib.error.HTTPError, OSError, ValueError, KeyError) as e:
+        except urllib.error.HTTPError as e:
+            _logger.warning("ghr_compliance Gemini API HTTP error: %s", e, exc_info=True)
+            if e.code == 404:
+                return None, _("Modelo no disponible (404). Verifique la API key y el nombre del modelo en Ajustes.")
+            return None, _("Error HTTP %s: %s") % (e.code, e.reason or "")
+        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
             _logger.warning("ghr_compliance Gemini API error: %s", e, exc_info=True)
             return None, _("Error de conexión o respuesta inválida.")
         candidates = data.get("candidates") or []
@@ -405,11 +476,78 @@ FORMATO DE SALIDA REQUERIDO:
             raise UserError(_("¡No hay tutía! Este cliente es Rojo Candela y solo puede ser aprobado por la gerencia."))
         self.state = 'approved'
 
+    def action_send_survey_invitation(self):
+        """Crea respuesta de encuesta, genera enlace y envía email al contacto."""
+        self.ensure_one()
+        if not self.survey_id:
+            raise UserError(_("Asigne una encuesta a esta evaluación antes de enviar la invitación."))
+        if not self.partner_id or not self.partner_id.email:
+            raise UserError(_("El contacto debe tener email para enviar la invitación."))
+        survey = self.survey_id
+        user_inputs = survey._create_answer(partner=self.partner_id, check_attempts=False)
+        if not user_inputs:
+            raise UserError(_("No se pudo crear la respuesta de encuesta."))
+        user_input = user_inputs[0]
+        base_url = (self.env["ir.config_parameter"].sudo().get_param("web.base.url") or "").rstrip("/")
+        start_path = survey.get_start_url()
+        fill_url = "%s%s?answer_token=%s" % (base_url, start_path, user_input.access_token)
+        subject = _("Invitación: %s") % survey.title
+        body = _(
+            "<p>Estimado/a,</p><p>Le invitamos a completar la encuesta de debida diligencia.</p>"
+            "<p><a href=\"%s\">Acceder a la encuesta</a></p><p>Enlace directo: %s</p>"
+        ) % (fill_url, fill_url)
+        self.env["mail.mail"].sudo().create({
+            "model": "compliance.assessment",
+            "res_id": self.id,
+            "email_to": self.partner_id.email,
+            "subject": subject,
+            "body_html": body,
+        }).send()
+        self.message_post(body=_("Invitación a encuesta enviada por email a %s.") % self.partner_id.email)
+        return {"type": "ir.actions.client", "tag": "display_notification", "params": {
+            "title": _("Enviado"),
+            "message": _("Invitación enviada a %s.") % self.partner_id.email,
+            "type": "success",
+            "sticky": False,
+        }}
+
     @api.model
     def create(self, vals):
         if vals.get('name', 'Nuevo') == 'Nuevo':
             vals['name'] = self.env['ir.sequence'].next_by_code('compliance.assessment') or 'Nuevo'
         return super(ComplianceAssessment, self).create(vals)
+
+    @api.model
+    def _ensure_res_partner_columns(self):
+        """Migración: añade columnas de cumplimiento a res_partner si faltan (al actualizar módulo)."""
+        from ..hooks import _add_res_partner_columns
+        _add_res_partner_columns(self.env.cr)
+
+    @api.model
+    def _cron_remind_pending_assessments(self):
+        """Envía recordatorio por email para evaluaciones en borrador antiguas sin encuesta completada."""
+        from datetime import datetime, timedelta
+        days = int(self.env["ir.config_parameter"].sudo().get_param("ghr_compliance.reminder_days", "7"))
+        limit_date = datetime.now() - timedelta(days=days)
+        assessments = self.search([
+            ("state", "=", "draft"),
+            ("create_date", "<", limit_date),
+            ("partner_id.email", "!=", False),
+        ])
+        for assessment in assessments:
+            if not assessment.survey_id:
+                continue
+            body = _(
+                "<p>Estimado/a,</p><p>Le recordamos que tiene pendiente completar la encuesta de debida diligencia "
+                "para la evaluación %s.</p><p>Por favor, complete la encuesta a la mayor brevedad.</p>"
+            ) % assessment.name
+            self.env["mail.mail"].sudo().create({
+                "model": "compliance.assessment",
+                "res_id": assessment.id,
+                "email_to": assessment.partner_id.email,
+                "subject": _("Recordatorio: Encuesta de cumplimiento pendiente"),
+                "body_html": body,
+            }).send()
 
 # --- Perfiles de riesgo: umbrales personalizables por el cliente/operador desde la UI ---
 class ComplianceRiskProfile(models.Model):
@@ -476,11 +614,92 @@ class ComplianceRiskParameter(models.Model):
 class ComplianceQuestion(models.Model):
     _name = 'compliance.question'
     _description = 'Preguntas de la Matriz de Riesgo'
+    _order = 'sequence, id'
 
     name = fields.Char(string="Pregunta", required=True)
+    sequence = fields.Integer(string="Secuencia", default=10)
     category = fields.Selection([
         ('dealer', 'Dealer'),
         ('constructora', 'Constructora'),
         ('ambos', 'Ambos')
-    ], string="Categoría", default='ambos')
+    ], string="Categoría (legacy)", default='ambos', help="Compatibilidad con data existente.")
+    form_type = fields.Selection([
+        ('inmobiliario_pf', 'Inmobiliario Persona Física'),
+        ('inmobiliario_pj', 'Inmobiliario Persona Jurídica'),
+        ('automotriz_pf', 'Automotriz (Dealer) Persona Física'),
+        ('automotriz_pj', 'Automotriz (Dealer) Persona Jurídica'),
+        ('ambos', 'Todos los formularios'),
+    ], string="Tipo de formulario", default='ambos')
     weight = fields.Integer(string="Puntos (1-10)", default=1)
+    is_scorable = fields.Boolean(string="Calificable", default=True, help="Si está marcado, la respuesta incide en el score.")
+    destination_field = fields.Char(
+        string="Campo destino",
+        help="Nombre del campo en compliance.assessment o res.partner al que mapear (ej. origin_funds_score, occupation)."
+    )
+
+
+# Opciones amigables para "dónde guardar la respuesta" (sin jerga técnica)
+DESTINATION_MAPPING_OPTIONS = [
+    ('assessment,origin_funds_score', 'Evaluación: Puntaje origen de fondos'),
+    ('assessment,economic_activity_score', 'Evaluación: Puntaje actividad económica'),
+    ('assessment,pep_score', 'Evaluación: Puntaje PEP'),
+    ('assessment,nationality_score', 'Evaluación: Puntaje nacionalidad'),
+    ('assessment,transaction_bulto_score', 'Evaluación: Puntaje transacción bulto'),
+    ('assessment,transaccional_volume', 'Evaluación: Volumen mensual (USD)'),
+    ('assessment,transfer_count', 'Evaluación: Cantidad de transferencias'),
+    ('partner,occupation', 'Contacto: Ocupación / Cargo'),
+    ('partner,origin_funds', 'Contacto: Origen de fondos'),
+    ('partner,is_pep', 'Contacto: Es PEP'),
+    ('partner,nationality_country_id', 'Contacto: Nacionalidad'),
+    ('partner,monthly_salary', 'Contacto: Salario mensual'),
+    ('partner,other_income', 'Contacto: Otros ingresos mensuales'),
+    ('partner,compliance_notes', 'Contacto: Notas de cumplimiento'),
+]
+
+
+class ComplianceQuestionMapping(models.Model):
+    _name = 'compliance.question.mapping'
+    _description = 'Dónde se guarda cada respuesta de la encuesta'
+
+    survey_question_title = fields.Char(
+        string="Texto que debe tener el título de la pregunta",
+        required=True,
+        help="Palabra o frase que debe aparecer en el título de la pregunta en la encuesta. Cuando el cliente responda, su respuesta se guardará en el destino elegido abajo.",
+    )
+    form_type = fields.Selection([
+        ('inmobiliario_pf', 'Inmobiliario Persona Física'),
+        ('inmobiliario_pj', 'Inmobiliario Persona Jurídica'),
+        ('automotriz_pf', 'Automotriz (Dealer) Persona Física'),
+        ('automotriz_pj', 'Automotriz (Dealer) Persona Jurídica'),
+        ('ambos', 'Todos'),
+    ], string="Tipo de formulario", default='ambos', required=True,
+       help="Para qué tipo de evaluación aplica esta regla.")
+    destination_field = fields.Char(required=True, default='origin_funds_score')  # Uso interno
+    destination_model = fields.Selection([
+        ('assessment', 'assessment'),
+        ('partner', 'partner'),
+    ], default='assessment', required=True)  # Uso interno
+    destination_key = fields.Selection(
+        selection=DESTINATION_MAPPING_OPTIONS,
+        string="Guardar respuesta en",
+        compute="_compute_destination_key",
+        inverse="_inverse_destination_key",
+        help="Elija dónde debe guardarse la respuesta cuando el título de la pregunta coincida.",
+    )
+
+    @api.depends('destination_model', 'destination_field')
+    def _compute_destination_key(self):
+        for rec in self:
+            if rec.destination_model and rec.destination_field:
+                key = '%s,%s' % (rec.destination_model, rec.destination_field)
+                rec.destination_key = key if any(k[0] == key for k in DESTINATION_MAPPING_OPTIONS) else False
+            else:
+                rec.destination_key = False
+
+    def _inverse_destination_key(self):
+        for rec in self:
+            if rec.destination_key:
+                parts = rec.destination_key.split(',', 1)
+                if len(parts) == 2:
+                    rec.destination_model = parts[0]
+                    rec.destination_field = parts[1]

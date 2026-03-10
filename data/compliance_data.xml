@@ -13,6 +13,22 @@
             <field name="key">ghr_compliance.dealer_cash_limit</field>
             <field name="value">15000</field>
         </record>
+        <record id="param_reminder_days" model="ir.config_parameter">
+            <field name="key">ghr_compliance.reminder_days</field>
+            <field name="value">7</field>
+        </record>
+        <record id="param_validity_months" model="ir.config_parameter">
+            <field name="key">ghr_compliance.validity_months</field>
+            <field name="value">12</field>
+        </record>
+        <record id="ir_cron_remind_pending_assessments" model="ir.cron">
+            <field name="name">Compliance: recordatorio encuestas pendientes</field>
+            <field name="model_id" ref="model_compliance_assessment"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_remind_pending_assessments()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
 
         <!-- Perfiles de umbrales por defecto: el operador puede modificarlos desde Compliance > Configuración -->
         <record id="profile_default" model="compliance.risk.profile">

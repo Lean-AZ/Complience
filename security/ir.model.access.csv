@@ -3,3 +3,5 @@ access_compliance_assessment,compliance.assessment,model_compliance_assessment,b
 access_compliance_question,compliance.question,model_compliance_question,base.group_user,1,1,1,1
 access_compliance_risk_profile,compliance.risk.profile,model_compliance_risk_profile,base.group_user,1,1,1,1
 access_compliance_risk_parameter,compliance.risk.parameter,model_compliance_risk_parameter,base.group_user,1,1,1,1
+access_compliance_question_mapping,compliance.question.mapping,model_compliance_question_mapping,base.group_user,1,1,1,1
+access_compliance_document_analysis,compliance.document.analysis,model_compliance_document_analysis,base.group_user,1,1,1,1
