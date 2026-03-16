@@ -37,13 +37,58 @@
             <field name="transfer_count_limit">3</field>
             <field name="score_threshold_medium">36</field>
             <field name="score_threshold_high">71</field>
+            <!-- Pesos base equivalentes a los defaults del modelo -->
+            <field name="weight_origin_funds">0.30</field>
+            <field name="weight_economic_activity">0.25</field>
+            <field name="weight_pep">0.20</field>
+            <field name="weight_nationality">0.15</field>
+            <field name="weight_transaction_bulto">0.10</field>
         </record>
+
+        <!-- Perfil alineado a escenario de Vinculación inicial:
+             Cliente (origen, actividad, PEP) pesa algo más que Geografía y Transaccional -->
+        <record id="profile_kyc_initial_engagement" model="compliance.risk.profile">
+            <field name="name">Perfil KYC - Vinculación inicial</field>
+            <field name="volume_limit_usd">15000</field>
+            <field name="transfer_count_limit">3</field>
+            <field name="score_threshold_medium">36</field>
+            <field name="score_threshold_high">71</field>
+            <!-- Suma 1.0: 0.25 + 0.20 + 0.15 + 0.20 + 0.20 -->
+            <field name="weight_origin_funds">0.25</field>
+            <field name="weight_economic_activity">0.20</field>
+            <field name="weight_pep">0.15</field>
+            <field name="weight_nationality">0.20</field>
+            <field name="weight_transaction_bulto">0.20</field>
+        </record>
+
+        <!-- Perfil alineado a escenario de Monitoreo continuo:
+             se incrementa el peso del comportamiento transaccional -->
+        <record id="profile_kyc_continuous_monitoring" model="compliance.risk.profile">
+            <field name="name">Perfil KYC - Monitoreo continuo</field>
+            <field name="volume_limit_usd">15000</field>
+            <field name="transfer_count_limit">3</field>
+            <field name="score_threshold_medium">36</field>
+            <field name="score_threshold_high">71</field>
+            <!-- Suma 1.0: 0.20 + 0.15 + 0.15 + 0.20 + 0.30 -->
+            <field name="weight_origin_funds">0.20</field>
+            <field name="weight_economic_activity">0.15</field>
+            <field name="weight_pep">0.15</field>
+            <field name="weight_nationality">0.20</field>
+            <field name="weight_transaction_bulto">0.30</field>
+        </record>
+
         <record id="profile_constructora" model="compliance.risk.profile">
             <field name="name">Constructora</field>
             <field name="volume_limit_usd">400000</field>
             <field name="transfer_count_limit">3</field>
             <field name="score_threshold_medium">36</field>
             <field name="score_threshold_high">71</field>
+            <!-- Se parte de los mismos pesos base; el usuario puede ajustarlos -->
+            <field name="weight_origin_funds">0.30</field>
+            <field name="weight_economic_activity">0.25</field>
+            <field name="weight_pep">0.20</field>
+            <field name="weight_nationality">0.15</field>
+            <field name="weight_transaction_bulto">0.10</field>
         </record>
         <record id="profile_dealer" model="compliance.risk.profile">
             <field name="name">Dealer</field>
@@ -51,6 +96,11 @@
             <field name="transfer_count_limit">3</field>
             <field name="score_threshold_medium">36</field>
             <field name="score_threshold_high">71</field>
+            <field name="weight_origin_funds">0.30</field>
+            <field name="weight_economic_activity">0.25</field>
+            <field name="weight_pep">0.20</field>
+            <field name="weight_nationality">0.15</field>
+            <field name="weight_transaction_bulto">0.10</field>
         </record>
     </data>
 

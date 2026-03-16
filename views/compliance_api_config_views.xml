@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="compliance_api_config_view_form" model="ir.ui.view">
+        <field name="name">compliance.api.config.form</field>
+        <field name="model">compliance.api.config</field>
+        <field name="arch" type="xml">
+            <form string="Claves API">
+                <sheet>
+                    <group>
+                        <group string="API para OCR y dictamen con IA">
+                            <p class="text-muted">
+                                Configure aquí las claves para extraer texto de documentos (OCR) y generar el dictamen de cumplimiento con IA.
+                                Si hay clave de OpenAI se usa en preferencia; si no, se usa Gemini.
+                            </p>
+                            <label for="openai_api_key"/>
+                            <field name="openai_api_key" placeholder="sk-... (OpenAI)"/>
+                            <label for="gemini_api_key"/>
+                            <field name="gemini_api_key" placeholder="Pegar API Key Gemini..."/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_save" string="Guardar" type="object" class="btn-primary"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_compliance_api_config" model="ir.actions.act_window">
+        <field name="name">Claves API</field>
+        <field name="res_model">compliance.api.config</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Configure las claves API para OCR y dictamen.</p>
+            <p>Al abrir este formulario se cargarán las claves actuales. Edite y pulse Guardar.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_compliance_api_config"
+              name="Claves API"
+              parent="menu_compliance_config"
+              action="action_compliance_api_config"
+              sequence="1"
+              groups="base.group_system"/>
+</odoo>

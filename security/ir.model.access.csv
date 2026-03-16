@@ -1,4 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_compliance_api_config,compliance.api.config,model_compliance_api_config,base.group_system,1,1,1,1
 access_compliance_assessment,compliance.assessment,model_compliance_assessment,base.group_user,1,1,1,1
 access_compliance_question,compliance.question,model_compliance_question,base.group_user,1,1,1,1
 access_compliance_risk_profile,compliance.risk.profile,model_compliance_risk_profile,base.group_user,1,1,1,1

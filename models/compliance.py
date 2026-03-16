@@ -3,10 +3,15 @@ import json
 import logging
 import os
 import re
+import time
 import urllib.request
 import urllib.error
 
 from odoo import models, fields, api, _
+
+# Reintentos ante 429 (Too Many Requests) en dictamen
+_MAX_RETRIES_429 = 3
+_DELAY_429_SECONDS = (2, 5, 10)
 
 _logger = logging.getLogger(__name__)
 
@@ -45,6 +50,12 @@ class ComplianceAssessment(models.Model):
         'survey.survey',
         string="Encuesta asociada",
         help="Encuesta de debida diligencia usada para esta evaluación.",
+    )
+    user_input_id = fields.Many2one(
+        'survey.user_input',
+        string="Respuesta de encuesta",
+        help="Última respuesta de encuesta completada por el cliente para esta evaluación.",
+        copy=False,
     )
     compliance_officer_id = fields.Many2one(
         'res.users',
@@ -86,11 +97,77 @@ class ComplianceAssessment(models.Model):
         compute="_compute_risk_alert_message",
         sanitize=False,
     )
+    kyc_raw_json = fields.Text(
+        string="Datos KYC (JSON)",
+        help="Copia en formato JSON de todas las respuestas del formulario KYC Persona Física.",
+    )
+    # Resumen KYC (campos clave traídos desde el formulario PF)
+    kyc_income_origin_category = fields.Selection(
+        [
+            ('asalariado', 'Asalariado'),
+            ('jubilado', 'Jubilado'),
+            ('independiente', 'Independiente'),
+            ('otro', 'Otro'),
+        ],
+        string="KYC: Origen de los ingresos",
+        help="Categoría de origen de ingresos declarada en el formulario KYC.",
+    )
+    kyc_expected_monthly_range = fields.Selection(
+        [
+            ('rango_1_10000', '1-10,000'),
+            ('rango_10001_100000', '10,001-100,000'),
+            ('rango_100001_250000', '100,001-250,000'),
+            ('rango_250001_500000', '250,001-500,000'),
+            ('rango_500001_1000000', '500,001-1,000,000'),
+            ('rango_1000001_mas', '1,000,001 o más'),
+        ],
+        string="KYC: Rango monto mensual esperado (DOP)",
+        help="Rango de monto mensual esperado declarado en el formulario KYC.",
+    )
+    kyc_product_type = fields.Selection(
+        [
+            ('bajo_costo', 'Inmueble de bajo costo'),
+            ('alto_costo', 'Inmueble de alto costo'),
+            ('otro', 'Otro'),
+        ],
+        string="KYC: Tipo de adquisición",
+        help="Tipo de adquisición o producto declarado en el formulario KYC.",
+    )
+    kyc_international_transfers_flag = fields.Boolean(
+        string="KYC: Realiza transferencias internacionales",
+        help="Indica si el cliente declaró realizar transferencias internacionales.",
+    )
+    kyc_transfers_country_id = fields.Many2one(
+        'res.country',
+        string="KYC: País de transferencias internacionales",
+        help="País de origen de las transferencias internacionales declaradas.",
+    )
+    kyc_is_pep_flag = fields.Boolean(
+        string="KYC: Es o ha sido PEP",
+        help="Marcado si el cliente declaró ser o haber sido PEP o figura pública.",
+    )
+    kyc_has_pep_link_flag = fields.Boolean(
+        string="KYC: Tiene vínculo con PEP",
+        help="Marcado si el cliente declaró tener vínculo familiar o societario con una PEP.",
+    )
+    kyc_project_name = fields.Char(
+        string="KYC: Nombre del proyecto",
+        help="Nombre del proyecto o fideicomiso asociado a la adquisición.",
+    )
+    kyc_purpose_summary = fields.Text(
+        string="KYC: Propósito de la adquisición",
+        help="Resumen del propósito de la adquisición o inversión declarado por el cliente.",
+    )
     purchase_capacity_monthly = fields.Float(
         string="Capacidad de adquisición (mensual)",
         compute="_compute_purchase_capacity_monthly",
         store=True,
         help="Salario + otros ingresos del contacto (mensual).",
+    )
+    ai_cost_total = fields.Float(
+        string="Costo total IA (créditos)",
+        compute="_compute_ai_cost_total",
+        store=True,
     )
 
     @api.depends('partner_id', 'partner_id.monthly_salary', 'partner_id.other_income')
@@ -100,6 +177,14 @@ class ComplianceAssessment(models.Model):
                 rec.purchase_capacity_monthly = (rec.partner_id.monthly_salary or 0) + (rec.partner_id.other_income or 0)
             else:
                 rec.purchase_capacity_monthly = 0.0
+
+    @api.depends('document_analysis_ids.ai_cost')
+    def _compute_ai_cost_total(self):
+        for rec in self:
+            total = 0.0
+            for da in rec.document_analysis_ids:
+                total += da.ai_cost or 0.0
+            rec.ai_cost_total = total
 
     def _get_thresholds(self):
         """Devuelve umbrales y pesos del perfil asignado o por defecto (para score, semáforo y alertas)."""
@@ -129,6 +214,121 @@ class ComplianceAssessment(models.Model):
             'w_pep': 0.20,
             'w_geo': 0.15,
             'w_volume': 0.10,
+        }
+
+    # -------------------------------------------------------------------------
+    # Helpers de reporte
+    # -------------------------------------------------------------------------
+    def _get_kyc_pf_report_data(self):
+        """Prepara datos para el reporte KYC Persona Física.
+
+        Devuelve un dict con:
+        - kyc: dict de respuestas KYC (x_kyc_*) parseado desde kyc_raw_json.
+        - partner: datos básicos del contacto (nombre, documento, dirección, etc.).
+        - company_logo: logo de la compañía en base64 para el encabezado del reporte.
+        """
+        self.ensure_one()
+        kyc = {}
+        if self.kyc_raw_json:
+            try:
+                kyc = json.loads(self.kyc_raw_json) or {}
+            except Exception:
+                kyc = {}
+
+        partner_vals = {}
+        if self.partner_id:
+            partner = self.partner_id
+            partner_vals = {
+                'name': partner.name or '',
+                'vat': partner.vat or '',
+                'street': partner.street or '',
+                'street2': partner.street2 or '',
+                'city': partner.city or '',
+                'zip': getattr(partner, 'zip', '') or '',
+                'country_name': partner.country_id.name or '',
+                'phone': partner.phone or '',
+                'mobile': partner.mobile or '',
+                'email': partner.email or '',
+            }
+
+        company_logo = ''
+        # company.logo es binary (bytes); lo convertimos a str base64 si existe
+        logo_binary = self.env.company.logo
+        if isinstance(logo_binary, (bytes, bytearray)):
+            try:
+                company_logo = logo_binary.decode('utf-8')
+            except Exception:
+                company_logo = ''
+
+        return {
+            'kyc': kyc,
+            'partner': partner_vals,
+            'company_logo': company_logo,
+        }
+
+    def _get_kyc_qa_report_data(self):
+        """Lista de preguntas y respuestas para el reporte PDF (sin celdas).
+
+        Si hay user_input_id, usa las líneas de la encuesta (título de pregunta + valor).
+        Si no, usa kyc_raw_json; las "preguntas" serán las claves del JSON.
+        Devuelve: {'qa_list': [{'question': str, 'answer': str}, ...], 'partner': {...}, 'company_logo': str}
+        """
+        self.ensure_one()
+        qa_list = []
+        if self.user_input_id:
+            for line in self.user_input_id.user_input_line_ids.sorted(
+                key=lambda l: (l.question_id.sequence if l.question_id else 0, l.question_id.id or 0, l.id)
+            ):
+                title = (line.question_id.title or '').strip() or _('Pregunta')
+                val = (
+                    getattr(line, 'value_char_box', None)
+                    or getattr(line, 'value_text_box', None)
+                )
+                if val is not None and str(val).strip():
+                    answer = str(val).strip()
+                elif getattr(line, 'value_numerical_box', None) is not None:
+                    answer = str(line.value_numerical_box)
+                elif getattr(line, 'suggested_answer_id', None) and line.suggested_answer_id.value:
+                    answer = line.suggested_answer_id.value
+                elif getattr(line, 'value_date', None):
+                    answer = str(line.value_date)
+                elif getattr(line, 'value_datetime', None):
+                    answer = str(line.value_datetime)
+                else:
+                    answer = ''
+                qa_list.append({'question': title, 'answer': answer or _('(Sin respuesta)')})
+        else:
+            kyc = {}
+            if self.kyc_raw_json:
+                try:
+                    kyc = json.loads(self.kyc_raw_json) or {}
+                except Exception:
+                    kyc = {}
+            for key, val in sorted(kyc.items()):
+                if val is None or (isinstance(val, str) and not val.strip()):
+                    continue
+                label = key.replace('x_kyc_', '').replace('_', ' ').strip().title()
+                qa_list.append({'question': label, 'answer': str(val).strip()})
+
+        partner_vals = {}
+        if self.partner_id:
+            p = self.partner_id
+            partner_vals = {
+                'name': p.name or '',
+                'vat': p.vat or '',
+                'email': p.email or '',
+            }
+        company_logo = ''
+        logo_binary = self.env.company.logo
+        if isinstance(logo_binary, (bytes, bytearray)):
+            try:
+                company_logo = logo_binary.decode('utf-8')
+            except Exception:
+                pass
+        return {
+            'qa_list': qa_list,
+            'partner': partner_vals,
+            'company_logo': company_logo,
         }
 
     @api.depends('origin_funds_score', 'economic_activity_score', 'pep_score', 
@@ -320,7 +520,6 @@ FORMATO DE SALIDA REQUERIDO:
 
     def _call_gemini_api(self, api_key, prompt_text):
         """Llama a la API de Gemini y devuelve el texto generado o None si hay error."""
-        # Usar modelo estable: gemini-2.0-flash o gemini-1.5-flash-latest evita 404 con v1beta
         model_name = "gemini-2.0-flash"
         url = "https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent" % model_name
         headers = {
@@ -334,23 +533,33 @@ FORMATO DE SALIDA REQUERIDO:
                 "temperature": 0.3,
             },
         }
-        try:
-            req = urllib.request.Request(
-                url,
-                data=json.dumps(body).encode("utf-8"),
-                headers=headers,
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=30) as resp:
-                data = json.loads(resp.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            _logger.warning("ghr_compliance Gemini API HTTP error: %s", e, exc_info=True)
-            if e.code == 404:
-                return None, _("Modelo no disponible (404). Verifique la API key y el nombre del modelo en Ajustes.")
-            return None, _("Error HTTP %s: %s") % (e.code, e.reason or "")
-        except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
-            _logger.warning("ghr_compliance Gemini API error: %s", e, exc_info=True)
-            return None, _("Error de conexión o respuesta inválida.")
+        data = None
+        for attempt in range(_MAX_RETRIES_429 + 1):
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(body).encode("utf-8"),
+                    headers=headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < _MAX_RETRIES_429:
+                    delay = _DELAY_429_SECONDS[attempt]
+                    _logger.info("ghr_compliance Gemini API 429, reintento en %ss (intento %s)", delay, attempt + 1)
+                    time.sleep(delay)
+                    continue
+                _logger.warning("ghr_compliance Gemini API HTTP error: %s", e, exc_info=True)
+                if e.code == 404:
+                    return None, _("Modelo no disponible (404). Verifique la API key y el nombre del modelo en Ajustes.")
+                return None, _("Error HTTP %s: %s") % (e.code, e.reason or "")
+            except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+                _logger.warning("ghr_compliance Gemini API error: %s", e, exc_info=True)
+                return None, _("Error de conexión o respuesta inválida.")
+        if data is None:
+            return None, _("Error de conexión.")
         candidates = data.get("candidates") or []
         if not candidates:
             return None, _("La API no devolvió respuesta.")
@@ -360,6 +569,58 @@ FORMATO DE SALIDA REQUERIDO:
         text = (parts[0].get("text") or "").strip()
         if not text:
             return None, _("Texto vacío.")
+        return text, None
+
+    def _call_gpt_api(self, api_key, prompt_text):
+        """Llama a la API de OpenAI (GPT) y devuelve el texto generado o None si hay error."""
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer %s" % api_key,
+        }
+        body = {
+            "model": "gpt-4o-mini",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": prompt_text,
+                }
+            ],
+            "temperature": 0.3,
+            "max_tokens": 1024,
+        }
+        data = None
+        for attempt in range(_MAX_RETRIES_429 + 1):
+            try:
+                req = urllib.request.Request(
+                    url,
+                    data=json.dumps(body).encode("utf-8"),
+                    headers=headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=30) as resp:
+                    data = json.loads(resp.read().decode("utf-8"))
+                break
+            except urllib.error.HTTPError as e:
+                if e.code == 429 and attempt < _MAX_RETRIES_429:
+                    delay = _DELAY_429_SECONDS[attempt]
+                    _logger.info("ghr_compliance GPT API 429, reintento en %ss (intento %s)", delay, attempt + 1)
+                    time.sleep(delay)
+                    continue
+                _logger.warning("ghr_compliance GPT API HTTP error: %s", e, exc_info=True)
+                return None, _("Error HTTP GPT %s: %s") % (e.code, e.reason or "")
+            except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
+                _logger.warning("ghr_compliance GPT API error: %s", e, exc_info=True)
+                return None, _("Error de conexión o respuesta inválida (GPT).")
+        if data is None:
+            return None, _("Error de conexión.")
+        choices = data.get("choices") or []
+        if not choices:
+            return None, _("La API GPT no devolvió respuesta.")
+        message = choices[0].get("message") or {}
+        text = (message.get("content") or "").strip()
+        if not text:
+            return None, _("Texto vacío de GPT.")
         return text, None
 
     def _dictamen_text_to_html(self, text):
@@ -446,25 +707,47 @@ FORMATO DE SALIDA REQUERIDO:
             "<p><b>DICTAMEN:</b> %s.</p>"
         ) % (riesgo_detectado, analisis_integral, q1, q2, q3, dictamen)
 
+    def action_report_compliance_kyc_pf(self):
+        """Abre el reporte PDF de preguntas y respuestas KYC (evita XMLID en botón type=action)."""
+        self.ensure_one()
+        return self.env.ref("ghr_compliance.action_report_compliance_kyc_pf").report_action(self)
+
     def action_generate_ai_report(self):
-        """Genera el dictamen y lo guarda en ai_report. Usa Gemini si hay API key; si no, dictamen por reglas."""
+        """Genera el dictamen y lo guarda en ai_report.
+
+        Prioridad:
+        - Si hay API key de OpenAI (GPT), usa GPT.
+        - En su defecto, si hay API key de Gemini, usa Gemini.
+        - Si ninguna está configurada o falla la IA, usa dictamen por reglas internas.
+        """
         for rec in self:
             if not rec.partner_id:
                 continue
 
-            api_key = (rec.env["ir.config_parameter"].sudo().get_param("ghr_compliance.gemini_api_key") or "").strip()
+            params = rec.env["ir.config_parameter"].sudo()
+            gpt_key = (params.get_param("ghr_compliance.openai_api_key") or "").strip()
+            gemini_key = (params.get_param("ghr_compliance.gemini_api_key") or "").strip()
+
+            use_gpt = bool(gpt_key)
+            api_key = gpt_key or gemini_key or ""
 
             if api_key:
                 data_block = rec._build_assessment_data_for_prompt()
                 full_prompt = "%s\n\n%s" % (data_block, rec._GEMINI_DICTAMEN_PROMPT)
-                text, err = rec._call_gemini_api(api_key, full_prompt)
+                if use_gpt:
+                    text, err = rec._call_gpt_api(api_key, full_prompt)
+                else:
+                    text, err = rec._call_gemini_api(api_key, full_prompt)
+
                 if text and not err:
                     rec.ai_report = rec._dictamen_text_to_html(text)
                     continue
+
                 fallback_html = rec._build_fallback_ai_report()
                 notice = _(
-                    "<p><i>No se pudo generar el dictamen con IA (error o sin respuesta). "
-                    "Se muestra el dictamen por reglas internas. Verifique la API key en Ajustes o la conexión.</i></p>"
+                    "<p><i>No se pudo generar el dictamen con IA (GPT/Gemini) "
+                    "(error o sin respuesta). Se muestra el dictamen por reglas internas. "
+                    "Verifique la API key en Ajustes o la conexión.</i></p>"
                 )
                 rec.ai_report = notice + fallback_html
             else:

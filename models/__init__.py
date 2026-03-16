@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from . import compliance
+from . import compliance_api_config
 from . import compliance_document
 from . import res_config_settings
 from . import res_partner

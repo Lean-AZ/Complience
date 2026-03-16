@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Reporte KYC: preguntas y respuestas de la encuesta (listado, sin celdas) -->
+    <template id="report_compliance_kyc_pf_document">
+        <t t-call="web.external_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="report_data" t-value="o._get_kyc_qa_report_data()"/>
+                <t t-set="qa_list" t-value="report_data.get('qa_list', [])"/>
+                <t t-set="partner" t-value="report_data.get('partner', {})"/>
+                <t t-set="company_logo" t-value="report_data.get('company_logo')"/>
+                <div class="page" style="font-size: 11px;">
+                    <div style="width:100%; display:flex; align-items:center; margin-bottom:12px;">
+                        <div style="flex:0 0 auto;">
+                            <img t-if="company_logo"
+                                 t-att-src="'data:image/png;base64,%s' % company_logo"
+                                 style="max-height:40px;"/>
+                        </div>
+                        <div style="flex:1 1 auto; text-align:center;">
+                            <h3 style="margin:0; font-size:14px;">Debida diligencia: respuestas de la encuesta</h3>
+                            <p style="margin:4px 0 0 0; font-size:12px;">
+                                <strong><t t-esc="partner.get('name', '')"/></strong>
+                                <t t-if="partner.get('email')"> — <span t-esc="partner.get('email')"/></t>
+                            </p>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px;">
+                        <t t-foreach="qa_list" t-as="item">
+                            <div style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #eee;">
+                                <div style="font-weight:bold; color:#333; margin-bottom:2px;" t-esc="item.get('question', '')"/>
+                                <div style="color:#555; padding-left:8px;" t-esc="item.get('answer', '')"/>
+                            </div>
+                        </t>
+                        <t t-if="not qa_list">
+                            <p style="color:#888;"><em>No hay respuestas de encuesta registradas para esta evaluación.</em></p>
+                        </t>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <report
+        id="action_report_compliance_kyc_pf"
+        model="compliance.assessment"
+        string="KYC Persona Física"
+        report_type="qweb-pdf"
+        name="ghr_compliance.report_compliance_kyc_pf_document"
+        file="ghr_compliance.report_compliance_kyc_pf_document"
+        print_report_name="'KYC_PF_%s' % (object.name or '')"/>
+</odoo>
+

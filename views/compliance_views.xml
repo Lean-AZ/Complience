@@ -10,6 +10,7 @@
                     <button name="action_extract_ocr" string="Extraer texto (OCR)" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_send_survey_invitation" string="Enviar invitación a encuesta" type="object" class="btn-secondary" invisible="not survey_id or not partner_id"/>
                     <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn-secondary" invisible="not partner_id"/>
+                    <button name="action_report_compliance_kyc_pf" string="Imprimir preguntas y respuestas" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_approve" string="Aprobar Cliente" type="object" class="oe_highlight" invisible="state == 'approved'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved"/>
                 </header>
@@ -25,24 +26,25 @@
                         <field name="critical_empty_fields" nolabel="1" readonly="1" class="oe_inline"/>
                     </group>
                     <group>
-                        <group string="Cuentagotas (Variables)">
+                        <group string="Factores de riesgo (Cuentagotas)">
                             <field name="profile_id" placeholder="Perfil de umbrales (opcional)..."/>
                             <field name="form_type"/>
                             <field name="survey_id" placeholder="Encuesta de debida diligencia..."/>
                             <field name="compliance_officer_id" placeholder="Oficial a notificar..."/>
-                            <field name="origin_funds_score" readonly="1"/>
-                            <field name="economic_activity_score" readonly="1"/>
-                            <field name="pep_score" readonly="1"/>
-                            <field name="nationality_score" readonly="1"/>
-                            <field name="transaction_bulto_score" readonly="1"/>
+                            <field name="origin_funds_score" string="Riesgo origen de fondos (1-10)" readonly="1"/>
+                            <field name="economic_activity_score" string="Riesgo actividad económica (1-10)" readonly="1"/>
+                            <field name="pep_score" string="Riesgo PEP / reputacional (0-10)" readonly="1"/>
+                            <field name="nationality_score" string="Riesgo geográfico / nacionalidad (1-10)" readonly="1"/>
+                            <field name="transaction_bulto_score" string="Riesgo volumen transaccional (1-10)" readonly="1"/>
                         </group>
-                        <group string="Semáforo de Riesgo">
-                            <field name="risk_score" widget="gauge" options="{'max': 100}" readonly="1"/>
+                        <group string="Semáforo de riesgo">
+                            <field name="risk_score" string="Score total de riesgo" widget="gauge" options="{'max': 100}" readonly="1"/>
                             <field name="risk_level" widget="badge" decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'" decoration-success="risk_level == 'low'" readonly="1"/>
-                            <field name="ai_penalty" string="🔥 Castigo IA" readonly="1"/>
-                            <field name="purchase_capacity_monthly" readonly="1"/>
-                            <field name="transaccional_volume" readonly="1"/>
-                            <field name="transfer_count" readonly="1"/>
+                            <field name="ai_penalty" string="Ajuste IA (castigo)" readonly="1"/>
+                            <field name="purchase_capacity_monthly" string="Capacidad mensual declarada" readonly="1"/>
+                            <field name="transaccional_volume" string="Volumen mensual estimado (USD)" readonly="1"/>
+                            <field name="transfer_count" string="Cantidad de transferencias iniciales" readonly="1"/>
+                            <field name="ai_cost_total" string="Costo total IA (créditos)" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
@@ -51,6 +53,7 @@
                                 <tree>
                                     <field name="name"/>
                                     <field name="attachment_id"/>
+                                    <field name="doc_type"/>
                                     <field name="ocr_text"/>
                                 </tree>
                             </field>
@@ -73,10 +76,11 @@
         <field name="model">compliance.assessment</field>
         <field name="arch" type="xml">
             <tree decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'">
-                <field name="name"/>
-                <field name="partner_id"/>
-                <field name="risk_score" widget="badge" decoration-danger="risk_level == 'high'"/>
-                <field name="risk_level" column_invisible="True"/> <field name="state" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'"/>
+                <field name="name" string="Evaluación"/>
+                <field name="partner_id" string="Cliente"/>
+                <field name="risk_score" string="Score riesgo" widget="badge" decoration-danger="risk_level == 'high'"/>
+                <field name="risk_level" column_invisible="True"/>
+                <field name="state" string="Estado" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'"/>
             </tree>
         </field>
     </record>

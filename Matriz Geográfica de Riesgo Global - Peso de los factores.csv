@@ -1,0 +1,6 @@
+Factor de Riesgo,Matriz Inicial (Vinculación),Matriz General (Monitoreo Continuo),Justificación Técnica (Estándar Internacional)
+Cliente (Tipo y Actividad),40%,30%,"Al inicio, el ""Quién es"" y ""De qué vive"" es lo que más pesa (Conoce a tu Cliente - KYC). En el monitoreo continuo, su peso baja un poco para darle espacio al comportamiento transaccional."
+Producto / Servicio,25%,20%,Define el vehículo del lavado. Los productos que permiten alto flujo y anonimato (ej. cripto o transferencias internacionales) pesan muchísimo.
+Zona Geográfica,20%,15%,Pierde un poco de peso en la etapa de monitoreo general a menos que el cliente cambie de país o empiece a triangular fondos.
+Canal,15%,10%,"El canal de entrada (presencial vs. digital). Una vez el cliente está dentro, el canal es secundario frente a los montos que mueve."
+Transaccionalidad,0%,25%,"Regla de oro del GAFI: Al vincular a un cliente, no hay historial transaccional real, por lo que pesa 0%. Pero en la vida del cliente, el monitoreo del dinero (KYT - Know Your Transaction) es el indicador número uno de riesgo."
