@@ -8,7 +8,10 @@
                         <h2>Informe de scoring PLAFT</h2>
                         <p><strong>Evaluación:</strong> <t t-esc="o.name"/></p>
                         <p><strong>Cliente:</strong> <t t-esc="o.partner_id.name"/></p>
-                        <p><strong>Fecha:</strong> <t t-esc="context_today().strftime('%d/%m/%Y')"/></p>
+                        <p>
+                            <strong>Fecha:</strong>
+                            <span t-field="o.create_date" t-options='{"widget": "date"}'/>
+                        </p>
                         <table class="table table-sm">
                             <tr><td>Puntos Origen de Fondos (1-10)</td><td><t t-esc="o.origin_funds_score"/></td></tr>
                             <tr><td>Puntos Actividad Económica (1-10)</td><td><t t-esc="o.economic_activity_score"/></td></tr>

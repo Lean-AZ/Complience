@@ -911,9 +911,40 @@ FORMATO DE SALIDA REQUERIDO:
         ) % (riesgo_detectado, analisis_integral, q1, q2, q3, dictamen)
 
     def action_report_compliance_kyc_pf(self):
-        """Abre el reporte PDF de preguntas y respuestas KYC (evita XMLID en botón type=action)."""
+        """Imprimible 1 – solo preguntas y respuestas KYC (R-08).
+
+        No dependemos del xmlid exacto, buscamos el reporte por report_name
+        para evitar errores si el ID se ha perdido o cambiado en la BD.
+        """
         self.ensure_one()
-        return self.env.ref("ghr_compliance.action_report_compliance_kyc_pf").report_action(self)
+        report = self.env["ir.actions.report"].sudo().search(
+            [("report_name", "=", "ghr_compliance.report_compliance_kyc_pf_document")],
+            limit=1,
+        )
+        if not report:
+            raise UserError(
+                _(
+                    "No se encontró el reporte de preguntas y respuestas KYC. "
+                    "Actualice el módulo ghr_compliance o contacte al administrador."
+                )
+            )
+        return report.report_action(self)
+
+    def action_report_compliance_scoring(self):
+        """Imprimible 2 – Análisis de riesgo con scoring (R-09)."""
+        self.ensure_one()
+        report = self.env["ir.actions.report"].sudo().search(
+            [("report_name", "=", "ghr_compliance.report_compliance_assessment_scoring")],
+            limit=1,
+        )
+        if not report:
+            raise UserError(
+                _(
+                    "No se encontró el reporte de análisis de riesgo y scoring. "
+                    "Actualice el módulo ghr_compliance o contacte al administrador."
+                )
+            )
+        return report.report_action(self)
 
     def action_generate_ai_report(self):
         """Genera el dictamen y lo guarda en ai_report.
