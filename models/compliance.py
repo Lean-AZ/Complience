@@ -17,6 +17,20 @@ _DELAY_429_SECONDS = (2, 5, 10)
 
 _logger = logging.getLogger(__name__)
 
+_PROMPT_PERFIL_OSINT = """
+Actúa como especialista en Inteligencia de Fuentes Abiertas (OSINT). Analiza el siguiente perfil para nuestra matriz de riesgo: Cliente [{kyc_nombre}], Nacionalidad [{kyc_nacionalidad}], Ocupación/Empresa [{kyc_ocupacion}].
+Aplica un análisis de búsqueda profunda en internet (Deep Search) basado en tu conocimiento para detectar si existen noticias negativas, exposición política (PEP), relación con lavado de activos o presencia en listas de sanciones internacionales para este perfil o industria en su país.
+Sintetiza cualquier hallazgo relevante o, si no hay registros, evalúa el riesgo reputacional inherente a su ocupación y procedencia.
+Devuelve tu reporte de riesgo y alertas en un máximo de cuatro (4) oraciones.
+""".strip()
+
+_GPT_DICTAMEN_PROMPT = """
+Actúa como Oficial de Cumplimiento experto en PLAFT. Realiza un dictamen integral y holístico del expediente de este cliente.
+A continuación tienes la información consolidada. Respuestas del formulario KYC: [{respuestas_kyc_json}]. Resumen de los análisis de documentos adjuntos: [{resumen_ocr_documentos}].
+No analices el expediente documento por documento ni página por página; realiza un cruce global. Evalúa la coherencia entre su perfil económico, el origen de sus fondos, las validaciones de identidad y el volumen de la transacción, identificando cualquier inconsistencia, bandera roja o intento de ocultamiento.
+Genera una conclusión definitiva justificando tu decisión al respecto del nivel de riesgo. Tu respuesta DEBE ser un texto corrido de exactamente uno (1) o máximo dos (2) párrafos.
+""".strip()
+
 # #region agent log
 def _debug_log(session_id, hypothesis_id, location, message, data=None):
     try:
@@ -192,6 +206,14 @@ class ComplianceAssessment(models.Model):
 
     # Cache simple para mapear título de pregunta -> sección (desde CSV KYC PF)
     _KYC_SECTION_CACHE = None
+
+    def _build_ai_profile_prompt(self):
+        self.ensure_one()
+        return _PROMPT_PERFIL_OSINT.format(
+            kyc_nombre=self.partner_id.name or '',
+            kyc_nacionalidad=self.partner_id.country_id.name or '',
+            kyc_ocupacion=getattr(self, "kyc_actividad_economica", False) or (self.profile_id.name or ''),
+        )
 
     @api.depends('partner_id', 'partner_id.monthly_salary', 'partner_id.other_income')
     def _compute_purchase_capacity_monthly(self):
@@ -652,41 +674,24 @@ class ComplianceAssessment(models.Model):
                 }
             }
 
-    # Prompt para IA (dictamen ultracompacto, 3 bloques)
-    _GEMINI_DICTAMEN_PROMPT = """Actúa como Oficial de Cumplimiento especializado en PLAFT.
-Usa ÚNICAMENTE la información estructurada de la evaluación que se te envía arriba (datos del cliente, puntuaciones de riesgo, volumen y transferencias) y, de forma opcional, los breves resúmenes OCR de documentos adjuntos.
-No repitas textualmente párrafos completos del OCR ni reescribas toda la información; solo sintetiza y extrae conclusiones.
-
-Realiza un análisis forense de la operación y genera un dictamen ultracompacto (máximo 15 líneas).
-
-Tu análisis debe estar estructurado en solo 3 bloques de texto corrido:
-
-BLOQUE 1: COHERENCIA Y RIESGO (Texto continuo)
-Evalúa en un solo párrafo denso:
-1. Si la identidad y residencia son consistentes.
-2. Si el "Perfil Económico" (Ingresos/Cargo) justifica lógicamente el "Nivel de Operaciones" y la importación (ej. ¿Tiene capacidad real de compra y mantenimiento?).
-3. Si el "Origen de Fondos" es específico o vago.
-4. Si es PEP o tiene riesgo reputacional alto según tu base de conocimiento interna.
-
-BLOQUE 2: CALIDAD DEL ENTORNO (Texto continuo)
-Evalúa brevemente si las Referencias Comerciales y Bancarias denotan formalidad (correos corporativos, bancos reconocidos) o informalidad riesgosa.
-
-BLOQUE 3: BÚSQUEDA Y VEREDICTO
-Provee 3 cadenas de búsqueda exactas (Google Dorks) separadas por " | " (barras verticales) para ahorrar espacio, y termina con una frase de CONCLUSIÓN FINAL (Aprobado/Revisar/Rechazar).
-
----
-FORMATO DE SALIDA REQUERIDO:
-**RIESGO DETECTADO:** [BAJO/MEDIO/ALTO]
-
-**ANÁLISIS INTEGRAL:** [Aquí redacta el Bloque 1 y 2 unidos en un solo párrafo potente y directo sin saltos de línea innecesarios].
-
-**BÚSQUEDAS SUGERIDAS:** `[Cadena 1]` | `[Cadena 2]` | `[Cadena 3]`
-
-**DICTAMEN:** [Frase final corta].
-"""
+    def _get_ai_documents_summary(self):
+        """Resumen compacto de los diagnósticos OCR para usar en el dictamen global."""
+        self.ensure_one()
+        docs = self.document_analysis_ids.filtered(lambda d: d.ocr_text)
+        if not docs:
+            return ""
+        # Reutilizamos el helper de acortar texto del modelo de análisis documental
+        Shortener = self.env["compliance.document.analysis"]
+        summaries = []
+        for doc in docs:
+            raw = doc.ocr_text or ""
+            short = Shortener._shorten_text_to_sentences(raw, max_sentences=3, max_chars=400)
+            label = doc.doc_type or "documento"
+            summaries.append("%s: %s" % (label, short))
+        return " | ".join(summaries)
 
     def _build_assessment_data_for_prompt(self):
-        """Devuelve un texto con los datos de la evaluación para inyectar en el prompt de Gemini."""
+        """Devuelve un texto con los datos de la evaluación para inyectar en prompts internos (si se requiere)."""
         self.ensure_one()
         partner = self.partner_id
         if not partner:
@@ -974,8 +979,11 @@ FORMATO DE SALIDA REQUERIDO:
             api_key = gpt_key or gemini_key or ""
 
             if api_key:
-                data_block = rec._build_assessment_data_for_prompt()
-                full_prompt = "%s\n\n%s" % (data_block, rec._GEMINI_DICTAMEN_PROMPT)
+                prompt = _GPT_DICTAMEN_PROMPT.format(
+                    respuestas_kyc_json=rec.kyc_raw_json or '{}',
+                    resumen_ocr_documentos=rec._get_ai_documents_summary(),
+                )
+                full_prompt = prompt
                 dictamen_tokens = 0
                 if use_gpt:
                     text, dictamen_tokens, err = rec._call_gpt_api(api_key, full_prompt)

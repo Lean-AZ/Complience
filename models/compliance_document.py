@@ -22,6 +22,20 @@ _logger = logging.getLogger(__name__)
 _MAX_RETRIES_429 = 3
 _DELAY_429_SECONDS = (2, 5, 10)
 
+_PROMPT_DOC_IDENTIDAD = """
+Actúa como analista forense de cumplimiento (PLAFT). Analiza la imagen de este documento de identidad y cruza la información visual con los datos declarados por el cliente: Nombre declarado [{kyc_nombre}], Documento declarado [{kyc_documento}].
+Verifica minuciosamente si el número de identidad, pasaporte o cédula y el nombre en la imagen coinciden exactamente con los datos declarados, independientemente de si la imagen es horizontal o vertical.
+Haz una conclusión explícita indicando si los datos concuerdan a la perfección o si existen discrepancias, alteraciones o no se constata la información.
+Devuelve ÚNICAMENTE tu diagnóstico directo en un máximo de cuatro (4) oraciones.
+""".strip()
+
+_PROMPT_DOC_ESTADO_CUENTA = """
+Actúa como auditor financiero de cumplimiento. Analiza el documento adjunto (estado de cuenta, carta bancaria o estado financiero) considerando que la fecha actual o de transacción es [{fecha_actual}].
+Tu tarea principal es extraer la fecha de emisión, corte o período del documento y calcular matemáticamente si corresponde a los últimos tres (3) meses, contando el mes en curso.
+Indica la fecha detectada en el documento y redacta una conclusión firme sobre si el documento es VÁLIDO por antigüedad o si está VENCIDO según la regla de los 3 meses. También revisa que haya congruencia entre el banco señalado en las respuestas y la entidad que emite el documento adjunto a analizar.
+Devuelve ÚNICAMENTE tu conclusión final en un máximo de cuatro (4) oraciones.
+""".strip()
+
 
 class ComplianceDocumentAnalysis(models.Model):
     _name = 'compliance.document.analysis'
@@ -41,6 +55,27 @@ class ComplianceDocumentAnalysis(models.Model):
     ai_tokens = fields.Integer(string="Tokens IA usados", default=0)
     ai_cost_usd = fields.Float(string="Costo IA OCR (USD)", default=0.0)
     ocr_text = fields.Text(string="Diagnóstico IA (breve, 2-3 oraciones)")
+
+    def _build_ai_prompt(self):
+        self.ensure_one()
+        if self.doc_type in ('id', 'cedula', 'passport'):
+            return _PROMPT_DOC_IDENTIDAD.format(
+                kyc_nombre=self.assessment_id.partner_id.name or '',
+                kyc_documento=self.assessment_id.partner_id.vat or '',
+            )
+        if self.doc_type in ('bank', 'estado_cuenta', 'estado_financiero'):
+            return _PROMPT_DOC_ESTADO_CUENTA.format(
+                fecha_actual=fields.Date.context_today(self),
+            )
+        # Fallback: prompt genérico anterior de OCR/resumen PLAFT
+        return (
+            "Actúa como analista de Cumplimiento. Tienes una imagen de un documento "
+            "(contrato, carta, formulario, identificación, etc.).\n\n"
+            "1) Lee TODO el texto visible del documento/imagen.\n"
+            "2) Identifica solo la información más relevante para una evaluación PLAFT (tipo de documento, partes involucradas, datos de identificación clave, montos/fechas relevantes y cualquier indicio de riesgo geográfico o PEP).\n"
+            "3) Devuelve ÚNICAMENTE un diagnóstico breve en un máximo de 2 a 3 oraciones, en texto corrido, "
+            "sin listas, sin saltos de línea adicionales y sin usar formato Markdown."
+        )
 
     @api.depends('attachment_id', 'attachment_id.name')
     def _compute_name(self):
@@ -148,7 +183,7 @@ class ComplianceDocumentAnalysis(models.Model):
         return result, error_msg
 
     @api.model
-    def _call_gpt_ocr(self, api_key, image_b64, mime_type):
+    def _call_gpt_ocr(self, api_key, image_b64, mime_type, prompt_text=None):
         """Envía imagen a OpenAI GPT y devuelve (diagnóstico breve, total_tokens, error)."""
         if isinstance(image_b64, bytes):
             image_b64 = image_b64.decode("utf-8")
@@ -157,7 +192,7 @@ class ComplianceDocumentAnalysis(models.Model):
             "Content-Type": "application/json",
             "Authorization": "Bearer %s" % api_key,
         }
-        prompt = (
+        prompt = prompt_text or (
             "Actúa como analista de Cumplimiento. Tienes una imagen de un documento "
             "(contrato, carta, formulario, identificación, etc.).\n\n"
             "1) Lee TODO el texto visible del documento/imagen.\n"
@@ -364,8 +399,9 @@ class ComplianceAssessment(models.Model):
                             parts = []
                             for idx, (img_b64, img_mime) in enumerate(page_images, start=1):
                                 if use_gpt:
+                                    # Para PDF usamos un prompt genérico, ya que el tipo de documento puede ser mixto.
                                     page_text, page_tokens, page_err = DocAnalysis._call_gpt_ocr(
-                                        api_key, img_b64, img_mime
+                                        api_key, img_b64, img_mime, prompt_text=None
                                     )
                                 else:
                                     page_text, page_err = DocAnalysis._call_gemini_ocr(api_key, img_b64, img_mime)
@@ -385,7 +421,22 @@ class ComplianceAssessment(models.Model):
                             err = None
             else:
                 if use_gpt:
-                    text, total_tokens, err = DocAnalysis._call_gpt_ocr(api_key, att.datas, mimetype)
+                    # Intento simple de inferir tipo de documento según el nombre del adjunto
+                    att_name = (att.name or "").lower()
+                    if any(word in att_name for word in ("id", "identidad", "cedula", "cédula", "passport", "pasaporte")):
+                        guessed_type = "id"
+                    elif any(word in att_name for word in ("estado", "cuenta", "bancario", "banco", "bank", "financiero")):
+                        guessed_type = "bank"
+                    else:
+                        guessed_type = "other"
+                    tmp_doc = DocAnalysis.new({
+                        "attachment_id": att.id,
+                        "assessment_id": self.id,
+                        "partner_id": self.partner_id.id,
+                        "doc_type": guessed_type,
+                    })
+                    prompt_text = tmp_doc._build_ai_prompt()
+                    text, total_tokens, err = DocAnalysis._call_gpt_ocr(api_key, att.datas, mimetype, prompt_text=prompt_text)
                 else:
                     text, err = DocAnalysis._call_gemini_ocr(api_key, att.datas, mimetype)
                     total_tokens = 0
@@ -401,6 +452,7 @@ class ComplianceAssessment(models.Model):
                 "attachment_id": att.id,
                 "assessment_id": self.id,
                 "partner_id": self.partner_id.id,
+                "doc_type": locals().get("guessed_type", "other"),
                 "ocr_text": text or ("[Error: %s]" % err if err else ""),
                 "ai_calls": calls,
                 "ai_tokens": int(total_tokens or 0),

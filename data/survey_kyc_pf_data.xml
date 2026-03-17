@@ -1638,5 +1638,36 @@
       <field name="question_type">numerical_box</field>
       <field name="constr_mandatory" eval="False"/>
     </record>
+
+    <!-- 9. Documentos Adjuntos - Persona Física -->
+    <record id="survey_kyc_pf_p16" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">200</field>
+      <field name="title">9. Documentos adjuntos (Persona Física)</field>
+      <field name="is_page" eval="True"/>
+      <field name="question_type" eval="False"/>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">201</field>
+      <field name="title">Adjunte copia de su documento de identidad vigente (cédula o pasaporte)</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">202</field>
+      <field name="title">Si es asalariado, adjunte carta de trabajo; si no lo es, documentos que justifiquen el origen de los fondos</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">203</field>
+      <field name="title">Adjunte estados de cuenta bancarios recientes (últimos 3 meses)</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
   </data>
 </odoo>

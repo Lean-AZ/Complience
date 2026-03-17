@@ -2,7 +2,7 @@
     'name': 'GHR Compliance: Matriz de Riesgo Inteligente',
     'version': '1.0',
     'author': 'Leandro & Rhodetech',
-    'depends': ['base', 'base_setup', 'mail', 'contacts', 'survey'],
+    'depends': ['base', 'base_setup', 'mail', 'contacts', 'survey', 'survey_upload_file'],
     'post_init_hook': 'ghr_compliance.hooks.post_init_hook',
     'data': [
         'security/ir.model.access.csv',
