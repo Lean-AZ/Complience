@@ -17,6 +17,10 @@
                             <label for="gemini_api_key"/>
                             <field name="gemini_api_key" placeholder="Pegar API Key Gemini..."/>
                         </group>
+                        <group string="Precios IA (USD por tokens)">
+                            <field name="ocr_price_per_1k_tokens_usd"/>
+                            <field name="dictamen_price_per_1k_tokens_usd"/>
+                        </group>
                     </group>
                 </sheet>
                 <footer>

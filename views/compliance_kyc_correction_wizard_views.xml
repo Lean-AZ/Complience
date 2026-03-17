@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_compliance_kyc_correction_wizard_form" model="ir.ui.view">
+        <field name="name">compliance.kyc.correction.wizard.form</field>
+        <field name="model">compliance.kyc.correction.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Corregir respuestas KYC" class="o_kyc_correction_wizard o_full_page_wizard">
+                <sheet>
+                    <field name="assessment_id" invisible="1"/>
+                    <div class="alert alert-info mb-3" role="alert">
+                        Edite solo las respuestas del cliente. Los cambios se guardan en el formulario original. Cada fila muestra la pregunta y su respuesta con el mismo tipo que en la encuesta (texto, fecha, opción, número).
+                    </div>
+                    <field name="line_ids" nolabel="1" readonly="0" mode="tree,form">
+                        <tree string="Respuestas KYC" create="0" delete="0" class="o_kyc_correction_tree">
+                            <field name="input_line_id" column_invisible="1"/>
+                            <field name="question_id" column_invisible="1"/>
+                            <field name="answer_type" column_invisible="1"/>
+                            <field name="question_title" string="Pregunta" readonly="1" optional="show"/>
+                            <field name="value_char_box" string="Respuesta (texto)" optional="show"
+                                invisible="answer_type != 'char_box'"/>
+                            <field name="value_text_box" string="Respuesta (texto largo)" optional="show"
+                                invisible="answer_type != 'text_box'"/>
+                            <field name="value_numerical_box" string="Respuesta (número)" optional="show"
+                                invisible="answer_type != 'numerical_box'"/>
+                            <field name="value_date" string="Respuesta (fecha)" optional="show"
+                                invisible="answer_type != 'date'"/>
+                            <field name="value_datetime" string="Respuesta (fecha y hora)" optional="show"
+                                invisible="answer_type != 'datetime'"/>
+                            <field name="suggested_answer_id" string="Respuesta (opción)" optional="show"
+                                invisible="answer_type != 'suggestion'"
+                                options="{'no_create': True}"/>
+                        </tree>
+                        <form string="Corregir respuesta KYC">
+                            <group>
+                                <field name="question_title" readonly="1"/>
+                                <field name="answer_type" readonly="1"/>
+                                <field name="question_id" invisible="1"/>
+                            </group>
+                            <group string="Respuesta">
+                                <field name="value_char_box" invisible="answer_type != 'char_box'"/>
+                                <field name="value_text_box" invisible="answer_type != 'text_box'"/>
+                                <field name="value_numerical_box" invisible="answer_type != 'numerical_box'"/>
+                                <field name="value_date" invisible="answer_type != 'date'"/>
+                                <field name="value_datetime" invisible="answer_type != 'datetime'"/>
+                                <field name="suggested_answer_id" invisible="answer_type != 'suggestion'"
+                                    options="{'no_create': True}"/>
+                            </group>
+                        </form>
+                    </field>
+                </sheet>
+                <footer>
+                    <button name="action_apply" string="Aplicar correcciones" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_compliance_kyc_correction_wizard" model="ir.actions.act_window">
+        <field name="name">Corregir respuestas KYC</field>
+        <field name="res_model">compliance.kyc.correction.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+    </record>
+</odoo>

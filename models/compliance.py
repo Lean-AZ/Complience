@@ -6,8 +6,10 @@ import re
 import time
 import urllib.request
 import urllib.error
+import csv
 
 from odoo import models, fields, api, _
+from odoo.tools import safe_eval
 
 # Reintentos ante 429 (Too Many Requests) en dictamen
 _MAX_RETRIES_429 = 3
@@ -165,10 +167,31 @@ class ComplianceAssessment(models.Model):
         help="Salario + otros ingresos del contacto (mensual).",
     )
     ai_cost_total = fields.Float(
-        string="Costo total IA (créditos)",
+        string="Costo total IA (USD)",
         compute="_compute_ai_cost_total",
         store=True,
     )
+    ai_cost_ocr_usd = fields.Float(
+        string="Costo IA OCR (USD)",
+        compute="_compute_ai_cost_total",
+        store=True,
+    )
+    ai_cost_dictamen_usd = fields.Float(
+        string="Costo IA dictamen (USD)",
+        default=0.0,
+    )
+    ai_dictamen_tokens = fields.Integer(
+        string="Tokens IA dictamen",
+        default=0,
+    )
+    kyc_answers_preview = fields.Html(
+        string="Respuestas KYC (vista rápida)",
+        compute="_compute_kyc_answers_preview",
+        sanitize=False,
+    )
+
+    # Cache simple para mapear título de pregunta -> sección (desde CSV KYC PF)
+    _KYC_SECTION_CACHE = None
 
     @api.depends('partner_id', 'partner_id.monthly_salary', 'partner_id.other_income')
     def _compute_purchase_capacity_monthly(self):
@@ -178,13 +201,106 @@ class ComplianceAssessment(models.Model):
             else:
                 rec.purchase_capacity_monthly = 0.0
 
-    @api.depends('document_analysis_ids.ai_cost')
+    @api.depends(
+        'user_input_id',
+        'user_input_id.user_input_line_ids',
+        'user_input_id.user_input_line_ids.answer_type',
+        'user_input_id.user_input_line_ids.value_char_box',
+        'user_input_id.user_input_line_ids.value_text_box',
+        'user_input_id.user_input_line_ids.value_numerical_box',
+        'user_input_id.user_input_line_ids.value_date',
+        'user_input_id.user_input_line_ids.value_datetime',
+        'user_input_id.user_input_line_ids.suggested_answer_id',
+        'kyc_raw_json',
+    )
+    def _compute_kyc_answers_preview(self):
+        """Construye una vista rápida HTML de preguntas y respuestas KYC, agrupadas por sección."""
+
+        def _load_sections(env_self):
+            """Carga mapa {titulo_pregunta_lower: nombre_seccion} desde el CSV KYC PF."""
+            if ComplianceAssessment._KYC_SECTION_CACHE is not None:
+                return ComplianceAssessment._KYC_SECTION_CACHE
+            mapping = {}
+            try:
+                base_dir = os.path.dirname(__file__)
+                csv_path = os.path.join(base_dir, "..", "data", "kyc_pf_persona_fisica.csv")
+                with open(csv_path, encoding="utf-8") as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        section = (row.get("Sección") or "").strip()
+                        label = (row.get("Nombre del Campo") or "").strip()
+                        if not label:
+                            continue
+                        key = label.lower()
+                        mapping[key] = section or ""
+            except Exception:
+                mapping = {}
+            ComplianceAssessment._KYC_SECTION_CACHE = mapping
+            return mapping
+
+        section_map = _load_sections(self)
+        for rec in self:
+            qa_html = ""
+            try:
+                data = rec._get_kyc_qa_report_data()
+                qa_list = data.get('qa_list') or []
+                if qa_list:
+                    # Agrupamos preguntas por sección de la encuesta
+                    sections = {}
+                    for item in qa_list:
+                        q = (item.get('question') or '').strip()
+                        a = (item.get('answer') or '').strip()
+                        key = q.lower()
+                        section = section_map.get(key) or _("Otras preguntas")
+                        sections.setdefault(section, []).append((q, a))
+
+                    blocks = []
+                    for section_name, items in sections.items():
+                        header = section_name or _("Otras preguntas")
+                        if section_name and section_name[0].isdigit():
+                            header = section_name
+                        # Tabla horizontal por sección: Pregunta | Respuesta (ancho completo)
+                        rows = [
+                            "<tr><th style='text-align:left;padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;width:35%%;'>%s</th>"
+                            "<th style='text-align:left;padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;width:65%%;'>%s</th></tr>"
+                            % (_("Pregunta"), _("Respuesta"))
+                        ]
+                        for q, a in items:
+                            rows.append(
+                                "<tr>"
+                                "<td style='vertical-align:middle;padding:6px 12px;border:1px solid #eee;width:35%%;'>%s</td>"
+                                "<td style='vertical-align:middle;padding:6px 12px;border:1px solid #eee;width:65%%;'>%s</td>"
+                                "</tr>"
+                                % (html.escape(q), html.escape(a))
+                            )
+                        table_html = (
+                            "<table style='width:100%%;border-collapse:collapse;font-size:13px;margin-top:6px;table-layout:fixed;'>%s</table>"
+                            % "".join(rows)
+                        )
+                        block = (
+                            "<details style='margin-bottom:10px;border:1px solid #dee2e6;border-radius:4px;width:100%%;box-sizing:border-box;'>"
+                            "<summary style='padding:8px 12px;cursor:pointer;font-weight:bold;background:#f8f9fa;'>%s</summary>"
+                            "<div style='padding:0 8px 8px;width:100%%;box-sizing:border-box;'>%s</div>"
+                            "</details>"
+                            % (html.escape(header), table_html)
+                        )
+                        blocks.append(block)
+                    qa_html = (
+                        "<div class='o_kyc_answers_preview' style='width:100%%;min-width:100%%;max-width:100%%;box-sizing:border-box;display:block;'>%s</div>"
+                        % "".join(blocks)
+                    )
+            except Exception:
+                qa_html = ""
+            rec.kyc_answers_preview = qa_html or False
+
+    @api.depends('document_analysis_ids.ai_cost_usd', 'ai_cost_dictamen_usd')
     def _compute_ai_cost_total(self):
         for rec in self:
-            total = 0.0
+            ocr_total = 0.0
             for da in rec.document_analysis_ids:
-                total += da.ai_cost or 0.0
-            rec.ai_cost_total = total
+                ocr_total += getattr(da, "ai_cost_usd", 0.0) or 0.0
+            rec.ai_cost_ocr_usd = ocr_total
+            rec.ai_cost_total = ocr_total + (rec.ai_cost_dictamen_usd or 0.0)
 
     def _get_thresholds(self):
         """Devuelve umbrales y pesos del perfil asignado o por defecto (para score, semáforo y alertas)."""
@@ -266,11 +382,69 @@ class ComplianceAssessment(models.Model):
             'company_logo': company_logo,
         }
 
-    def _get_kyc_qa_report_data(self):
-        """Lista de preguntas y respuestas para el reporte PDF (sin celdas).
+    def _format_kyc_answer(self, val):
+        """Convierte valor crudo a texto legible: booleanos como Sí/No, fechas formateadas."""
+        if val is None:
+            return ''
+        if val is True:
+            return _('Sí')
+        if val is False:
+            return _('No')
+        s = str(val).strip()
+        if s.lower() == 'true':
+            return _('Sí')
+        if s.lower() == 'false':
+            return _('No')
+        return s
 
-        Si hay user_input_id, usa las líneas de la encuesta (título de pregunta + valor).
-        Si no, usa kyc_raw_json; las "preguntas" serán las claves del JSON.
+    def action_open_kyc_correction_wizard(self):
+        """Abre el wizard para corregir las respuestas del cliente (R-06). Actualiza el formulario original."""
+        self.ensure_one()
+        if not self.user_input_id:
+            raise UserError(_("No hay una respuesta de encuesta asociada a esta evaluación."))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Corregir respuestas KYC'),
+            'res_model': 'compliance.kyc.correction.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_assessment_id': self.id,
+                'active_id': self.id,
+                'active_model': 'compliance.assessment',
+            },
+        }
+
+    def action_edit_kyc_answers(self):
+        """Abre la respuesta de encuesta original (vista técnica) para revisión avanzada."""
+        self.ensure_one()
+        if not self.user_input_id:
+            raise UserError(_("No hay una respuesta de encuesta asociada a esta evaluación."))
+        action = self.env['ir.actions.act_window']._for_xml_id('survey.action_survey_user_input')
+        # Forzamos la vista formulario principal de participaciones
+        form_view = self.env.ref('survey.survey_user_input_view_form', raise_if_not_found=False)
+        if form_view:
+            action['views'] = [(form_view.id, 'form')]
+        action['res_id'] = self.user_input_id.id
+        raw_ctx = action.get('context') or '{}'
+        ctx = {}
+        if isinstance(raw_ctx, dict):
+            ctx = dict(raw_ctx)
+        elif isinstance(raw_ctx, str):
+            try:
+                ctx = safe_eval(raw_ctx)
+            except Exception:
+                ctx = {}
+        if self.partner_id:
+            ctx.setdefault('default_partner_id', self.partner_id.id)
+        action['context'] = ctx
+        return action
+
+    def _get_kyc_qa_report_data(self):
+        """Lista de preguntas y respuestas tal como el usuario las envió (para R-05).
+
+        Prioridad: user_input_id (líneas de la encuesta). Si no hay, kyc_raw_json.
+        Las respuestas se muestran en formato legible (Sí/No, no True/False).
         Devuelve: {'qa_list': [{'question': str, 'answer': str}, ...], 'partner': {...}, 'company_logo': str}
         """
         self.ensure_one()
@@ -279,24 +453,34 @@ class ComplianceAssessment(models.Model):
             for line in self.user_input_id.user_input_line_ids.sorted(
                 key=lambda l: (l.question_id.sequence if l.question_id else 0, l.question_id.id or 0, l.id)
             ):
+                if not line.question_id or getattr(line.question_id, 'is_page', False):
+                    continue
                 title = (line.question_id.title or '').strip() or _('Pregunta')
-                val = (
-                    getattr(line, 'value_char_box', None)
-                    or getattr(line, 'value_text_box', None)
+                raw = (
+                    getattr(line, 'suggested_answer_id', None) and line.suggested_answer_id.value
                 )
-                if val is not None and str(val).strip():
-                    answer = str(val).strip()
-                elif getattr(line, 'value_numerical_box', None) is not None:
-                    answer = str(line.value_numerical_box)
-                elif getattr(line, 'suggested_answer_id', None) and line.suggested_answer_id.value:
-                    answer = line.suggested_answer_id.value
-                elif getattr(line, 'value_date', None):
-                    answer = str(line.value_date)
-                elif getattr(line, 'value_datetime', None):
-                    answer = str(line.value_datetime)
+                if raw:
+                    answer = self._format_kyc_answer(raw)
                 else:
+                    raw = (
+                        getattr(line, 'value_char_box', None)
+                        or getattr(line, 'value_text_box', None)
+                    )
+                    if raw is not None and str(raw).strip():
+                        answer = self._format_kyc_answer(raw)
+                    elif getattr(line, 'value_numerical_box', None) is not None:
+                        answer = str(line.value_numerical_box)
+                    elif getattr(line, 'value_date', None):
+                        answer = str(line.value_date)
+                    elif getattr(line, 'value_datetime', None):
+                        answer = str(line.value_datetime)
+                    else:
+                        answer = ''
+                # Para preguntas de texto/número/fecha, si quedó literalmente "No",
+                # lo tratamos como no respondida a nivel de visualización.
+                if (line.answer_type or '') != 'suggestion' and answer.strip().lower() == 'no':
                     answer = ''
-                qa_list.append({'question': title, 'answer': answer or _('(Sin respuesta)')})
+                qa_list.append({'question': title, 'answer': answer or _('No respondidada')})
         else:
             kyc = {}
             if self.kyc_raw_json:
@@ -305,10 +489,15 @@ class ComplianceAssessment(models.Model):
                 except Exception:
                     kyc = {}
             for key, val in sorted(kyc.items()):
-                if val is None or (isinstance(val, str) and not val.strip()):
+                if val is None and not (isinstance(val, bool)):
+                    continue
+                if isinstance(val, str) and not val.strip() and val.lower() not in ('false', 'true'):
                     continue
                 label = key.replace('x_kyc_', '').replace('_', ' ').strip().title()
-                qa_list.append({'question': label, 'answer': str(val).strip()})
+                answer = self._format_kyc_answer(val)
+                if not answer and val is not False and val is not True:
+                    continue
+                qa_list.append({'question': label, 'answer': answer or _('No respondidada')})
 
         partner_vals = {}
         if self.partner_id:
@@ -463,8 +652,12 @@ class ComplianceAssessment(models.Model):
                 }
             }
 
-    # Prompt para Gemini: Oficial de Cumplimiento de Autrab (dictamen ultracompacto, 3 bloques)
-    _GEMINI_DICTAMEN_PROMPT = """Actúa como Oficial de Cumplimiento de Autrab. Realiza un análisis forense de los datos suministrados para la importación del vehículo y genera un dictamen ultracompacto (máximo 15 líneas).
+    # Prompt para IA (dictamen ultracompacto, 3 bloques)
+    _GEMINI_DICTAMEN_PROMPT = """Actúa como Oficial de Cumplimiento especializado en PLAFT.
+Usa ÚNICAMENTE la información estructurada de la evaluación que se te envía arriba (datos del cliente, puntuaciones de riesgo, volumen y transferencias) y, de forma opcional, los breves resúmenes OCR de documentos adjuntos.
+No repitas textualmente párrafos completos del OCR ni reescribas toda la información; solo sintetiza y extrae conclusiones.
+
+Realiza un análisis forense de la operación y genera un dictamen ultracompacto (máximo 15 líneas).
 
 Tu análisis debe estar estructurado en solo 3 bloques de texto corrido:
 
@@ -503,7 +696,7 @@ FORMATO DE SALIDA REQUERIDO:
         riesgo_map = {'low': 'BAJO', 'medium': 'MEDIO', 'high': 'ALTO'}
         riesgo = riesgo_map.get(self.risk_level or 'low')
         lines = [
-            _("DATOS DE LA EVALUACIÓN (importación vehículo):"),
+            _("RESUMEN ESTRUCTURADO DE LA EVALUACIÓN:"),
             _("- Cliente: %s") % nombre,
             _("- País/Residencia: %s") % pais,
             _("- Puntos Origen de Fondos (1-10): %s") % self.origin_funds_score,
@@ -572,7 +765,7 @@ FORMATO DE SALIDA REQUERIDO:
         return text, None
 
     def _call_gpt_api(self, api_key, prompt_text):
-        """Llama a la API de OpenAI (GPT) y devuelve el texto generado o None si hay error."""
+        """Llama a la API de OpenAI (GPT) y devuelve (texto, total_tokens, error)."""
         url = "https://api.openai.com/v1/chat/completions"
         headers = {
             "Content-Type": "application/json",
@@ -608,34 +801,44 @@ FORMATO DE SALIDA REQUERIDO:
                     time.sleep(delay)
                     continue
                 _logger.warning("ghr_compliance GPT API HTTP error: %s", e, exc_info=True)
-                return None, _("Error HTTP GPT %s: %s") % (e.code, e.reason or "")
+                return None, 0, _("Error HTTP GPT %s: %s") % (e.code, e.reason or "")
             except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
                 _logger.warning("ghr_compliance GPT API error: %s", e, exc_info=True)
-                return None, _("Error de conexión o respuesta inválida (GPT).")
+                return None, 0, _("Error de conexión o respuesta inválida (GPT).")
         if data is None:
-            return None, _("Error de conexión.")
+            return None, 0, _("Error de conexión.")
         choices = data.get("choices") or []
         if not choices:
-            return None, _("La API GPT no devolvió respuesta.")
+            return None, 0, _("La API GPT no devolvió respuesta.")
         message = choices[0].get("message") or {}
         text = (message.get("content") or "").strip()
         if not text:
-            return None, _("Texto vacío de GPT.")
-        return text, None
+            return None, 0, _("Texto vacío de GPT.")
+
+        usage = data.get("usage") or {}
+        total_tokens = int(usage.get("total_tokens") or 0)
+        return text, total_tokens, None
 
     def _dictamen_text_to_html(self, text):
-        """Convierte el texto del dictamen (con **bold** y saltos) a HTML seguro."""
+        """Normaliza y convierte el texto del dictamen (con **bold**) a HTML seguro.
+
+        Se intenta mantenerlo compacto, eliminando líneas vacías y espacios
+        innecesarios, sin alterar la estructura pedida en el prompt.
+        """
         if not text:
             return ""
-        text = html.escape(text)
-        text = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", text)
-        lines = text.split("\n")
+        # Normalizar espacios en blanco
+        normalized = "\n".join(
+            ln.strip() for ln in str(text).splitlines() if ln.strip()
+        )
+        escaped = html.escape(normalized)
+        escaped = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", escaped)
+        lines = escaped.split("\n")
         out = []
         for line in lines:
-            line = line.strip()
             if line:
                 out.append("<p>%s</p>" % line)
-        return "".join(out) if out else "<p>%s</p>" % text
+        return "".join(out) if out else "<p>%s</p>" % escaped
 
     def _build_fallback_ai_report(self):
         """Genera el dictamen por reglas internas (sin IA)."""
@@ -720,13 +923,21 @@ FORMATO DE SALIDA REQUERIDO:
         - En su defecto, si hay API key de Gemini, usa Gemini.
         - Si ninguna está configurada o falla la IA, usa dictamen por reglas internas.
         """
+        params = self.env["ir.config_parameter"].sudo()
+        try:
+            dictamen_price_per_1k = float(
+                params.get_param("ghr_compliance.dictamen_price_per_1k_tokens_usd") or 0.0
+            )
+        except ValueError:
+            dictamen_price_per_1k = 0.0
+
         for rec in self:
             if not rec.partner_id:
                 continue
 
-            params = rec.env["ir.config_parameter"].sudo()
-            gpt_key = (params.get_param("ghr_compliance.openai_api_key") or "").strip()
-            gemini_key = (params.get_param("ghr_compliance.gemini_api_key") or "").strip()
+            cfg = rec.env["ir.config_parameter"].sudo()
+            gpt_key = (cfg.get_param("ghr_compliance.openai_api_key") or "").strip()
+            gemini_key = (cfg.get_param("ghr_compliance.gemini_api_key") or "").strip()
 
             use_gpt = bool(gpt_key)
             api_key = gpt_key or gemini_key or ""
@@ -734,13 +945,19 @@ FORMATO DE SALIDA REQUERIDO:
             if api_key:
                 data_block = rec._build_assessment_data_for_prompt()
                 full_prompt = "%s\n\n%s" % (data_block, rec._GEMINI_DICTAMEN_PROMPT)
+                dictamen_tokens = 0
                 if use_gpt:
-                    text, err = rec._call_gpt_api(api_key, full_prompt)
+                    text, dictamen_tokens, err = rec._call_gpt_api(api_key, full_prompt)
                 else:
                     text, err = rec._call_gemini_api(api_key, full_prompt)
 
                 if text and not err:
                     rec.ai_report = rec._dictamen_text_to_html(text)
+                    rec.ai_dictamen_tokens = int(dictamen_tokens or 0)
+                    if use_gpt and dictamen_price_per_1k and dictamen_tokens:
+                        rec.ai_cost_dictamen_usd = (float(dictamen_tokens) / 1000.0) * dictamen_price_per_1k
+                    else:
+                        rec.ai_cost_dictamen_usd = 0.0
                     continue
 
                 fallback_html = rec._build_fallback_ai_report()
@@ -752,6 +969,8 @@ FORMATO DE SALIDA REQUERIDO:
                 rec.ai_report = notice + fallback_html
             else:
                 rec.ai_report = rec._build_fallback_ai_report()
+                rec.ai_cost_dictamen_usd = 0.0
+                rec.ai_dictamen_tokens = 0
 
     def action_approve(self):
         """ Solo un administrador puede aprobar si el riesgo es Alto """
@@ -796,6 +1015,15 @@ FORMATO DE SALIDA REQUERIDO:
 
     @api.model
     def create(self, vals):
+        # Asignar encuesta KYC PF por defecto si no se ha definido
+        if not vals.get('survey_id'):
+            try:
+                survey = self.env.ref('ghr_compliance.survey_kyc_pf', raise_if_not_found=False)
+            except ValueError:
+                survey = False
+            if survey:
+                vals['survey_id'] = survey.id
+        # Asignar código de evaluación
         if vals.get('name', 'Nuevo') == 'Nuevo':
             vals['name'] = self.env['ir.sequence'].next_by_code('compliance.assessment') or 'Nuevo'
         return super(ComplianceAssessment, self).create(vals)
@@ -803,8 +1031,18 @@ FORMATO DE SALIDA REQUERIDO:
     @api.model
     def _ensure_res_partner_columns(self):
         """Migración: añade columnas de cumplimiento a res_partner si faltan (al actualizar módulo)."""
-        from ..hooks import _add_res_partner_columns
-        _add_res_partner_columns(self.env.cr)
+        import logging
+        try:
+            from ..hooks import _add_res_partner_columns
+            _add_res_partner_columns(self.env.cr)
+        except Exception as e:
+            if "lock" in str(e).lower() or "timeout" in str(e).lower() or "LockNotAvailable" in type(e).__name__:
+                logging.getLogger(__name__).warning(
+                    "ghr_compliance: no se pudieron añadir columnas a res_partner (lock/timeout). "
+                    "Cierre otras pestañas de Odoo y actualice el módulo de nuevo. Error: %s", e
+                )
+            else:
+                raise
 
     @api.model
     def _cron_remind_pending_assessments(self):

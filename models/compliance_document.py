@@ -38,7 +38,8 @@ class ComplianceDocumentAnalysis(models.Model):
         ('other', 'Otro'),
     ], string="Tipo de documento", default='other')
     ai_calls = fields.Integer(string="Llamadas IA", default=0)
-    ai_cost = fields.Float(string="Costo IA (créditos)", default=0.0)
+    ai_tokens = fields.Integer(string="Tokens IA usados", default=0)
+    ai_cost_usd = fields.Float(string="Costo IA OCR (USD)", default=0.0)
     ocr_text = fields.Text(string="Diagnóstico IA (breve, 2-3 oraciones)")
 
     @api.depends('attachment_id', 'attachment_id.name')
@@ -148,7 +149,7 @@ class ComplianceDocumentAnalysis(models.Model):
 
     @api.model
     def _call_gpt_ocr(self, api_key, image_b64, mime_type):
-        """Envía imagen a OpenAI GPT y devuelve un diagnóstico breve (2-3 oraciones)."""
+        """Envía imagen a OpenAI GPT y devuelve (diagnóstico breve, total_tokens, error)."""
         if isinstance(image_b64, bytes):
             image_b64 = image_b64.decode("utf-8")
         url = "https://api.openai.com/v1/chat/completions"
@@ -210,20 +211,44 @@ class ComplianceDocumentAnalysis(models.Model):
                     e.reason or "",
                     err_body or "",
                 )
-                return None, msg.strip()
+                return None, 0, msg.strip()
             except (urllib.error.URLError, OSError, ValueError, KeyError) as e:
                 _logger.warning("ghr_compliance GPT OCR error: %s", e)
-                return None, str(e)
+                return None, 0, str(e)
         if data is None:
-            return None, _("Error de conexión.")
+            return None, 0, _("Error de conexión.")
         choices = data.get("choices") or []
         if not choices:
-            return None, _("La API GPT no devolvió respuesta.")
+            return None, 0, _("La API GPT no devolvió respuesta.")
         message = choices[0].get("message") or {}
         text = (message.get("content") or "").strip()
         if not text:
-            return None, _("Respuesta vacía de GPT.")
-        return text, None
+            return None, 0, _("Respuesta vacía de GPT.")
+
+        usage = data.get("usage") or {}
+        total_tokens = int(usage.get("total_tokens") or 0)
+        return text, total_tokens, None
+
+    @api.model
+    def _shorten_text_to_sentences(self, text, max_sentences=3, max_chars=600):
+        """Normaliza un texto y lo limita a N oraciones y longitud máxima.
+
+        Se usa para que el diagnóstico OCR sea realmente breve y legible.
+        """
+        if not text:
+            return ""
+        # Normalizar espacios y saltos de línea
+        cleaned = " ".join(str(text).split())
+        # Separar por oraciones básicas (., ?, !)
+        import re as _re
+        sentences = _re.split(r'(?<=[.!?])\s+', cleaned)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if not sentences:
+            return cleaned[:max_chars]
+        trimmed = " ".join(sentences[:max_sentences])
+        if len(trimmed) > max_chars:
+            trimmed = trimmed[:max_chars].rstrip() + "…"
+        return trimmed
 
 
 class ComplianceAssessment(models.Model):
@@ -277,9 +302,11 @@ class ComplianceAssessment(models.Model):
         api_key = openai_key or gemini_key
         use_gpt = bool(openai_key)
         try:
-            ia_cost_per_call = float(params.get_param("ghr_compliance.ia_cost_per_call") or 1.0)
+            ocr_price_per_1k = float(
+                params.get_param("ghr_compliance.ocr_price_per_1k_tokens_usd") or 0.0
+            )
         except ValueError:
-            ia_cost_per_call = 1.0
+            ocr_price_per_1k = 0.0
         if not api_key:
             return {"type": "ir.actions.client", "tag": "display_notification", "params": {
                 "title": _("Configuración"),
@@ -313,6 +340,8 @@ class ComplianceAssessment(models.Model):
             mimetype = getattr(att, "mimetype", None) or "image/jpeg"
             text = None
             err = None
+            total_tokens = 0
+            calls = 0
             if mimetype == "application/pdf":
                 if not _PDF2IMAGE_AVAILABLE:
                     text = None
@@ -333,13 +362,20 @@ class ComplianceAssessment(models.Model):
                             err = _("No se pudieron obtener páginas del PDF (archivo vacío o no estándar).")
                         else:
                             parts = []
-                            calls = 0
                             for idx, (img_b64, img_mime) in enumerate(page_images, start=1):
                                 if use_gpt:
-                                    page_text, page_err = DocAnalysis._call_gpt_ocr(api_key, img_b64, img_mime)
+                                    page_text, page_tokens, page_err = DocAnalysis._call_gpt_ocr(
+                                        api_key, img_b64, img_mime
+                                    )
                                 else:
                                     page_text, page_err = DocAnalysis._call_gemini_ocr(api_key, img_b64, img_mime)
+                                    page_tokens = 0
                                 calls += 1
+                                if page_tokens:
+                                    total_tokens += int(page_tokens)
+                                # Acotar diagnóstico por página a 2-3 oraciones legibles
+                                if page_text:
+                                    page_text = DocAnalysis._shorten_text_to_sentences(page_text)
                                 if page_err:
                                     parts.append(_("--- Página %s ---") % idx + "\n[Error: %s]" % page_err)
                                 elif page_text:
@@ -348,19 +384,27 @@ class ComplianceAssessment(models.Model):
                             text = "\n\n".join(parts) if parts else None
                             err = None
             else:
-                calls = 0
                 if use_gpt:
-                    text, err = DocAnalysis._call_gpt_ocr(api_key, att.datas, mimetype)
+                    text, total_tokens, err = DocAnalysis._call_gpt_ocr(api_key, att.datas, mimetype)
                 else:
                     text, err = DocAnalysis._call_gemini_ocr(api_key, att.datas, mimetype)
+                    total_tokens = 0
                 calls += 1
+                if text:
+                    text = DocAnalysis._shorten_text_to_sentences(text)
+
+            ai_cost_usd = 0.0
+            if use_gpt and ocr_price_per_1k and total_tokens:
+                ai_cost_usd = (float(total_tokens) / 1000.0) * ocr_price_per_1k
+
             DocAnalysis.create({
                 "attachment_id": att.id,
                 "assessment_id": self.id,
                 "partner_id": self.partner_id.id,
                 "ocr_text": text or ("[Error: %s]" % err if err else ""),
                 "ai_calls": calls,
-                "ai_cost": calls * ia_cost_per_call,
+                "ai_tokens": int(total_tokens or 0),
+                "ai_cost_usd": ai_cost_usd,
             })
             created += 1
             time.sleep(2)
@@ -372,7 +416,11 @@ class ComplianceAssessment(models.Model):
         }}
 
     def _build_assessment_data_for_prompt(self):
-        """Incluye texto OCR de documentos en el prompt para deep search."""
+        """Incluye solo un resumen compacto del OCR en el prompt para IA.
+
+        Evitamos pegar todo el texto OCR para no repetir información y
+        mantener el prompt corto y barato en tokens.
+        """
         result = super()._build_assessment_data_for_prompt()
         if not result:
             result = ""
@@ -381,5 +429,11 @@ class ComplianceAssessment(models.Model):
             ("ocr_text", "!=", False),
         ]).mapped("ocr_text")
         if doc_texts:
-            result += "\n\n" + _("TEXTO EXTRAÍDO DE DOCUMENTOS ADJUNTOS (OCR):\n") + "\n---\n".join(doc_texts)
+            # Tomamos solo un resumen breve por documento para no saturar el prompt
+            summaries = []
+            for raw in doc_texts:
+                summaries.append(self.env["compliance.document.analysis"]._shorten_text_to_sentences(raw))
+            result += "\n\n" + _("RESUMEN OCR DE DOCUMENTOS ADJUNTOS:\n") + "\n".join(
+                "- %s" % s for s in summaries if s
+            )
         return result

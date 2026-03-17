@@ -6,11 +6,13 @@
         <field name="model">compliance.assessment</field>
         <field name="arch" type="xml">
             <form string="Evaluación PLAFT">
+                <field name="user_input_id" invisible="1"/>
                 <header>
                     <button name="action_extract_ocr" string="Extraer texto (OCR)" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_send_survey_invitation" string="Enviar invitación a encuesta" type="object" class="btn-secondary" invisible="not survey_id or not partner_id"/>
                     <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_report_compliance_kyc_pf" string="Imprimir preguntas y respuestas" type="object" class="btn-secondary" invisible="not partner_id"/>
+                    <button name="action_open_kyc_correction_wizard" string="Corregir respuestas KYC" type="object" class="btn-secondary" invisible="not user_input_id or not survey_id"/>
                     <button name="action_approve" string="Aprobar Cliente" type="object" class="oe_highlight" invisible="state == 'approved'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved"/>
                 </header>
@@ -37,14 +39,14 @@
                             <field name="nationality_score" string="Riesgo geográfico / nacionalidad (1-10)" readonly="1"/>
                             <field name="transaction_bulto_score" string="Riesgo volumen transaccional (1-10)" readonly="1"/>
                         </group>
-                        <group string="Semáforo de riesgo">
+                        <group string="Semáforo de riesgo y costo IA">
                             <field name="risk_score" string="Score total de riesgo" widget="gauge" options="{'max': 100}" readonly="1"/>
                             <field name="risk_level" widget="badge" decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'" decoration-success="risk_level == 'low'" readonly="1"/>
                             <field name="ai_penalty" string="Ajuste IA (castigo)" readonly="1"/>
                             <field name="purchase_capacity_monthly" string="Capacidad mensual declarada" readonly="1"/>
                             <field name="transaccional_volume" string="Volumen mensual estimado (USD)" readonly="1"/>
                             <field name="transfer_count" string="Cantidad de transferencias iniciales" readonly="1"/>
-                            <field name="ai_cost_total" string="Costo total IA (créditos)" readonly="1"/>
+                            <field name="ai_cost_total" string="Costo total IA en esta evaluación (USD)" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
@@ -54,12 +56,18 @@
                                     <field name="name"/>
                                     <field name="attachment_id"/>
                                     <field name="doc_type"/>
+                                    <field name="ai_calls"/>
                                     <field name="ocr_text"/>
                                 </tree>
                             </field>
                         </page>
                         <page string="🤖 IA info" name="ai_info">
                             <field name="ai_report" placeholder="Aquí aparecerá el resumen de la investigación..." readonly="1"/>
+                        </page>
+                        <page string="Respuestas KYC" name="kyc_answers">
+                            <div style="width: 100%; min-width: 100%;">
+                                <field name="kyc_answers_preview" nolabel="1" readonly="1"/>
+                            </div>
                         </page>
                     </notebook>
                 </sheet>
@@ -82,6 +90,31 @@
                 <field name="risk_level" column_invisible="True"/>
                 <field name="state" string="Estado" widget="badge" decoration-info="state == 'draft'" decoration-success="state == 'approved'"/>
             </tree>
+        </field>
+    </record>
+
+    <!-- Vista simple para análisis documental (OCR), sin mostrar tokens ni costo IA -->
+    <record id="view_compliance_document_analysis_form" model="ir.ui.view">
+        <field name="name">compliance.document.analysis.form</field>
+        <field name="model">compliance.document.analysis</field>
+        <field name="arch" type="xml">
+            <form string="Análisis documental">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="attachment_id" readonly="1"/>
+                            <field name="assessment_id" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="doc_type" readonly="1"/>
+                            <field name="ai_calls" string="Llamadas IA" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Diagnóstico IA">
+                        <field name="ocr_text" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
         </field>
     </record>
 

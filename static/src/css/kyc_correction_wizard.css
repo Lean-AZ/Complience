@@ -1,0 +1,23 @@
+/* Wizard Corregir respuestas KYC: pantalla completa, Pregunta y Respuesta visibles */
+.o_kyc_correction_wizard .o_list_view,
+.o_full_page_wizard .o_list_view {
+    min-width: 100%;
+    width: 100%;
+}
+.o_kyc_correction_wizard .o_list_table,
+.o_full_page_wizard .o_list_table {
+    min-width: 100%;
+}
+.o_kyc_correction_wizard .o_list_table th:first-child,
+.o_kyc_correction_wizard .o_list_table td:first-child,
+.o_full_page_wizard .o_list_table th:first-child,
+.o_full_page_wizard .o_list_table td:first-child {
+    min-width: 300px;
+    width: 40%;
+    white-space: normal;
+    word-wrap: break-word;
+}
+.o_kyc_correction_wizard .o_list_table td,
+.o_full_page_wizard .o_list_table td {
+    vertical-align: middle;
+}

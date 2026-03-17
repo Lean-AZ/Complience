@@ -13,11 +13,18 @@
         'report/report_compliance_validity.xml',
         'report/report_compliance_kyc_pf.xml',
         'views/compliance_views.xml',
+        'views/compliance_kyc_correction_wizard_views.xml',
+        'views/survey_user_input_views_inherit.xml',
         'views/compliance_api_config_views.xml',
         'views/compliance_question_views.xml',
         'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'ghr_compliance/static/src/css/kyc_correction_wizard.css',
+        ],
+    },
     'installable': True,
     'application': True,
 }
