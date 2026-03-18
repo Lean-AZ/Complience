@@ -7,6 +7,7 @@ import time
 import urllib.request
 import urllib.error
 import csv
+import base64
 
 from odoo import models, fields, api, _
 from odoo.tools import safe_eval
@@ -238,29 +239,7 @@ class ComplianceAssessment(models.Model):
     def _compute_kyc_answers_preview(self):
         """Construye una vista rápida HTML de preguntas y respuestas KYC, agrupadas por sección."""
 
-        def _load_sections(env_self):
-            """Carga mapa {titulo_pregunta_lower: nombre_seccion} desde el CSV KYC PF."""
-            if ComplianceAssessment._KYC_SECTION_CACHE is not None:
-                return ComplianceAssessment._KYC_SECTION_CACHE
-            mapping = {}
-            try:
-                base_dir = os.path.dirname(__file__)
-                csv_path = os.path.join(base_dir, "..", "data", "kyc_pf_persona_fisica.csv")
-                with open(csv_path, encoding="utf-8") as f:
-                    reader = csv.DictReader(f)
-                    for row in reader:
-                        section = (row.get("Sección") or "").strip()
-                        label = (row.get("Nombre del Campo") or "").strip()
-                        if not label:
-                            continue
-                        key = label.lower()
-                        mapping[key] = section or ""
-            except Exception:
-                mapping = {}
-            ComplianceAssessment._KYC_SECTION_CACHE = mapping
-            return mapping
-
-        section_map = _load_sections(self)
+        section_map = self._load_kyc_sections()
         for rec in self:
             qa_html = ""
             try:
@@ -283,37 +262,114 @@ class ComplianceAssessment(models.Model):
                             header = section_name
                         # Tabla horizontal por sección: Pregunta | Respuesta (ancho completo)
                         rows = [
-                            "<tr><th style='text-align:left;padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;width:35%%;'>%s</th>"
-                            "<th style='text-align:left;padding:8px 12px;border:1px solid #ddd;background:#f5f5f5;width:65%%;'>%s</th></tr>"
+                            "<tr>"
+                            "<th style='text-align:left;padding:10px 14px;border-bottom:1px solid #e2e8f0;"
+                            "background:#0f172a;color:#f9fafb;font-weight:600;width:35%%;'>%s</th>"
+                            "<th style='text-align:left;padding:10px 14px;border-bottom:1px solid #e2e8f0;"
+                            "background:#0f172a;color:#f9fafb;font-weight:600;width:65%%;'>%s</th>"
+                            "</tr>"
                             % (_("Pregunta"), _("Respuesta"))
                         ]
                         for q, a in items:
                             rows.append(
                                 "<tr>"
-                                "<td style='vertical-align:middle;padding:6px 12px;border:1px solid #eee;width:35%%;'>%s</td>"
-                                "<td style='vertical-align:middle;padding:6px 12px;border:1px solid #eee;width:65%%;'>%s</td>"
+                                "<td style='vertical-align:top;padding:8px 14px;border-bottom:1px solid #e5e7eb;"
+                                "background:#f9fafb;color:#111827;width:35%%;'>%s</td>"
+                                "<td style='vertical-align:top;padding:8px 14px;border-bottom:1px solid #e5e7eb;"
+                                "background:#ffffff;color:#111827;width:65%%;'>%s</td>"
                                 "</tr>"
-                                % (html.escape(q), html.escape(a))
+                                % (html.escape(q), html.escape(a) or "<span style='color:#9ca3af;'>%s</span>" % _("No respondida"))
                             )
                         table_html = (
-                            "<table style='width:100%%;border-collapse:collapse;font-size:13px;margin-top:6px;table-layout:fixed;'>%s</table>"
+                            "<table style='width:100%%;border-collapse:collapse;font-size:13px;"
+                            "margin-top:6px;table-layout:fixed;border-radius:6px;overflow:hidden;'>%s</table>"
                             % "".join(rows)
                         )
                         block = (
-                            "<details style='margin-bottom:10px;border:1px solid #dee2e6;border-radius:4px;width:100%%;box-sizing:border-box;'>"
-                            "<summary style='padding:8px 12px;cursor:pointer;font-weight:bold;background:#f8f9fa;'>%s</summary>"
-                            "<div style='padding:0 8px 8px;width:100%%;box-sizing:border-box;'>%s</div>"
+                            "<details style='margin-bottom:12px;border:1px solid #e2e8f0;border-radius:10px;"
+                            "width:100%%;box-sizing:border-box;background:#f8fafc;box-shadow:0 1px 2px rgba(15,23,42,0.04);'>"
+                            "<summary style='padding:10px 14px;cursor:pointer;font-weight:600;font-size:13px;"
+                            "background:linear-gradient(90deg,#0f172a,#1e293b);color:#f9fafb;border-radius:9px 9px 0 0;"
+                            "list-style:none;display:flex;align-items:center;justify-content:space-between;'>"
+                            "<span>%s</span>"
+                            "<span style='font-size:11px;opacity:0.85;'>%s</span>"
+                            "</summary>"
+                            "<div style='padding:4px 10px 10px;width:100%%;box-sizing:border-box;background:#f8fafc;'>%s</div>"
                             "</details>"
-                            % (html.escape(header), table_html)
+                            % (html.escape(header), _("%s preguntas") % len(items), table_html)
                         )
                         blocks.append(block)
                     qa_html = (
-                        "<div class='o_kyc_answers_preview' style='width:100%%;min-width:100%%;max-width:100%%;box-sizing:border-box;display:block;'>%s</div>"
-                        % "".join(blocks)
-                    )
+                        "<div class='o_kyc_answers_preview' "
+                        "style='width:100%%;min-width:100%%;max-width:100%%;box-sizing:border-box;display:block;"
+                        "font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",system-ui,sans-serif;"
+                        "font-size:13px;color:#0f172a;background:#f3f4f6;padding:8px 10px;border-radius:10px;'>"
+                        "<div style='margin-bottom:6px;font-size:13px;font-weight:600;color:#111827;'>%s</div>"
+                        "%s"
+                        "</div>"
+                    ) % (_("Resumen de respuestas KYC"), "".join(blocks))
             except Exception:
                 qa_html = ""
             rec.kyc_answers_preview = qa_html or False
+
+    @api.model
+    def _load_kyc_sections(self):
+        """Carga mapa {titulo_pregunta_lower: nombre_seccion} desde el CSV KYC PF (cacheado)."""
+        if ComplianceAssessment._KYC_SECTION_CACHE is not None:
+            return ComplianceAssessment._KYC_SECTION_CACHE
+        mapping = {}
+        try:
+            base_dir = os.path.dirname(__file__)
+            csv_path = os.path.join(base_dir, "..", "data", "kyc_pf_persona_fisica.csv")
+            with open(csv_path, encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    section = (row.get("Sección") or "").strip()
+                    label = (row.get("Nombre del Campo") or "").strip()
+                    if not label:
+                        continue
+                    key = label.lower()
+                    mapping[key] = section or ""
+        except Exception:
+            mapping = {}
+        ComplianceAssessment._KYC_SECTION_CACHE = mapping
+        return mapping
+
+    def _get_kyc_qa_grouped_for_report(self):
+        """Devuelve preguntas y respuestas agrupadas por sección para el reporte PDF.
+
+        Formato:
+        [
+          {'name': '1. DATOS GENERALES DEL CLIENTE', 'items': [{'question': '...', 'answer': '...'}, ...]},
+          ...
+        ]
+        """
+        self.ensure_one()
+        data = self._get_kyc_qa_report_data()
+        qa_list = data.get('qa_list') or []
+        section_map = self._load_kyc_sections()
+
+        sections = {}
+        for item in qa_list:
+            q = (item.get('question') or '').strip()
+            a = (item.get('answer') or '').strip()
+            if not q:
+                continue
+            key = q.lower()
+            section_name = section_map.get(key) or _("Otras preguntas")
+            sections.setdefault(section_name, []).append({
+                "question": q,
+                "answer": a,
+            })
+
+        # Orden sencillo: por nombre de sección tal como viene del CSV
+        grouped = []
+        for name, items in sections.items():
+            grouped.append({
+                "name": name or _("Otras preguntas"),
+                "items": items,
+            })
+        return grouped
 
     @api.depends('document_analysis_ids.ai_cost_usd', 'ai_cost_dictamen_usd')
     def _compute_ai_cost_total(self):
@@ -935,6 +991,155 @@ class ComplianceAssessment(models.Model):
             )
         return report.report_action(self)
 
+    def _get_missing_documents(self):
+        """Devuelve lista de documentos (upload_file) faltantes según la encuesta.
+
+        Se basa en las preguntas de tipo upload_file del survey asociado.
+        """
+        self.ensure_one()
+        if not self.survey_id or not self.user_input_id:
+            return []
+
+        SurveyQuestion = self.env["survey.question"].sudo()
+        questions = SurveyQuestion.search([
+            ("survey_id", "=", self.survey_id.id),
+            ("question_type", "=", "upload_file"),
+            ("is_page", "=", False),
+        ], order="sequence,id")
+
+        # Mapeo rápido pregunta_id -> línea de respuesta
+        line_by_qid = {}
+        for line in self.user_input_id.user_input_line_ids:
+            if line.question_id:
+                line_by_qid[line.question_id.id] = line
+
+        def _line_has_upload(line):
+            if not line:
+                return False
+            # Compatibilidad entre versiones / campos
+            for fname in (
+                "value_attachment_ids",
+                "attachment_ids",
+                "value_file_upload_ids",
+                "value_file_upload_id",
+                "value_binary",
+                "value_attachment_id",
+            ):
+                if not hasattr(line, fname):
+                    continue
+                val = getattr(line, fname)
+                # Recordset / list
+                try:
+                    if val and hasattr(val, "__len__") and len(val):
+                        return True
+                except Exception:
+                    pass
+                # scalar
+                if isinstance(val, (int, str)) and str(val).strip():
+                    return True
+            return False
+
+        missing = []
+        for q in questions:
+            line = line_by_qid.get(q.id)
+            has_file = _line_has_upload(line)
+            if not has_file:
+                missing.append({
+                    "title": (q.title or "").strip(),
+                    "required": bool(getattr(q, "constr_mandatory", False)),
+                })
+        return missing
+
+    def _send_completed_kyc_email(self, to_email=None):
+        """R-11/R-12: Envía al cliente el PDF de respuestas y lista de faltantes."""
+        self.ensure_one()
+        raw = to_email or (self.partner_id.email if self.partner_id else "") or ""
+        to_email = (str(raw).strip() if raw not in (None, False) else "") or ""
+        if not to_email or to_email in ("0", "0.0"):
+            return False
+
+        # Render PDF del imprimible de respuestas
+        report = self.env["ir.actions.report"].sudo().search(
+            [("report_name", "=", "ghr_compliance.report_compliance_kyc_pf_document")],
+            limit=1,
+        )
+        pdf_attachment_id = False
+        if report:
+            try:
+                pdf_content, _content_type = report._render_qweb_pdf([self.id])
+                if pdf_content:
+                    att = self.env["ir.attachment"].sudo().create({
+                        "name": "KYC_PF_%s.pdf" % (self.name or "Evaluacion"),
+                        "type": "binary",
+                        "datas": base64.b64encode(pdf_content),
+                        "mimetype": "application/pdf",
+                        "res_model": "compliance.assessment",
+                        "res_id": self.id,
+                    })
+                    pdf_attachment_id = att.id
+            except Exception:
+                pdf_attachment_id = False
+
+        missing = self._get_missing_documents()
+        missing_required = [m["title"] for m in missing if m.get("required")]
+        missing_optional = [m["title"] for m in missing if not m.get("required")]
+
+        missing_html = ""
+        if missing_required or missing_optional:
+            parts = []
+            if missing_required:
+                parts.append("<p style='margin:10px 0 6px;'><b>Documentos requeridos pendientes:</b></p><ul style='margin:0 0 8px 18px;'>%s</ul>" % (
+                    "".join("<li>%s</li>" % html.escape(t) for t in missing_required)
+                ))
+            if missing_optional:
+                parts.append("<p style='margin:10px 0 6px;'><b>Documentos adicionales sugeridos:</b></p><ul style='margin:0 0 8px 18px;'>%s</ul>" % (
+                    "".join("<li>%s</li>" % html.escape(t) for t in missing_optional)
+                ))
+            missing_html = "".join(parts)
+
+        subject = _("Confirmación: formulario KYC recibido (%s)") % (self.name or "")
+        company_name = self.env.company.name or _("Su entidad")
+        partner_name = self.partner_id.name or ""
+        body_html = (
+            "<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;"
+            "font-size:14px;color:#111827;background:#f3f4f6;padding:16px;'>"
+            "<div style='max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;"
+            "box-shadow:0 1px 3px rgba(15,23,42,0.08);overflow:hidden;'>"
+            "<div style='padding:16px 20px;border-bottom:1px solid #e5e7eb;'>"
+            "<h2 style='margin:0;font-size:18px;color:#111827;'>Confirmación de recepción de formulario KYC</h2>"
+            "<p style='margin:6px 0 0;font-size:13px;color:#4b5563;'>%s</p>"
+            "</div>"
+            "<div style='padding:18px 20px;'>"
+            "<p style='margin:0 0 10px;'>Estimado/a %s,</p>"
+            "<p style='margin:0 0 12px;line-height:1.5;'>Hemos recibido correctamente su formulario de Debida Diligencia (KYC). "
+            "En el archivo PDF adjunto encontrará un resumen imprimible de todas las respuestas suministradas.</p>"
+            "%s"
+            "<p style='margin:12px 0 0;line-height:1.5;'>Agradecemos su colaboración. "
+            "Ante cualquier duda o corrección, puede responder directamente a este correo.</p>"
+            "</div>"
+            "<div style='padding:10px 20px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;'>"
+            "<p style='margin:0;'>Este mensaje fue emitido automáticamente por el sistema de Cumplimiento de %s.</p>"
+            "</div>"
+            "</div>"
+            "</div>"
+        ) % (company_name, partner_name, missing_html or "", company_name)
+
+        vals = {
+            "model": "compliance.assessment",
+            "res_id": self.id,
+            "email_to": to_email,
+            "email_from": self.env.company.email or self.env.user.email or False,
+            "subject": subject,
+            "body_html": body_html,
+        }
+        if pdf_attachment_id:
+            vals["attachment_ids"] = [(6, 0, [pdf_attachment_id])]
+        self.env["mail.mail"].sudo().create(vals).send()
+        # Evidencia interna en la evaluación (email siempre como texto legible)
+        email_display = to_email if isinstance(to_email, str) else (self.partner_id.email or _("(sin correo)"))
+        self.message_post(body=_("Imprimible KYC y lista de documentos faltantes enviados por email a %s.") % email_display)
+        return True
+
     def action_report_compliance_scoring(self):
         """Imprimible 2 – Análisis de riesgo con scoring (R-09)."""
         self.ensure_one()
@@ -1032,22 +1237,51 @@ class ComplianceAssessment(models.Model):
         base_url = (self.env["ir.config_parameter"].sudo().get_param("web.base.url") or "").rstrip("/")
         start_path = survey.get_start_url()
         fill_url = "%s%s?answer_token=%s" % (base_url, start_path, user_input.access_token)
-        subject = _("Invitación: %s") % survey.title
-        body = _(
-            "<p>Estimado/a,</p><p>Le invitamos a completar la encuesta de debida diligencia.</p>"
-            "<p><a href=\"%s\">Acceder a la encuesta</a></p><p>Enlace directo: %s</p>"
-        ) % (fill_url, fill_url)
-        self.env["mail.mail"].sudo().create({
+        subject = _("Invitación a formulario de Debida Diligencia (KYC)")
+        company_name = self.env.company.name or _("Su entidad")
+        body = (
+            "<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;"
+            "font-size:14px;color:#111827;background:#f3f4f6;padding:16px;'>"
+            "<div style='max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;"
+            "box-shadow:0 1px 3px rgba(15,23,42,0.08);overflow:hidden;'>"
+            "<div style='padding:16px 20px;border-bottom:1px solid #e5e7eb;'>"
+            "<h2 style='margin:0;font-size:18px;color:#111827;'>Invitación a completar formulario de Debida Diligencia</h2>"
+            "<p style='margin:6px 0 0;font-size:13px;color:#4b5563;'>%s</p>"
+            "</div>"
+            "<div style='padding:18px 20px;'>"
+            "<p style='margin:0 0 10px;'>Estimado/a,</p>"
+            "<p style='margin:0 0 12px;line-height:1.5;'>Para continuar con el proceso de vinculación, le invitamos a completar "
+            "su formulario de Debida Diligencia (KYC) mediante el siguiente enlace seguro:</p>"
+            "<p style='margin:0 0 14px;text-align:center;'>"
+            "<a href=\"%s\" style='display:inline-block;padding:10px 18px;border-radius:999px;"
+            "background:#111827;color:#f9fafb;text-decoration:none;font-size:13px;'>"
+            "Completar formulario KYC</a></p>"
+            "<p style='margin:0 0 8px;font-size:12px;color:#6b7280;text-align:center;'>"
+            "Si el botón no funciona, copie y pegue este enlace en su navegador:</p>"
+            "<p style='margin:0 0 4px;font-size:11px;color:#4b5563;word-break:break-all;text-align:center;'>%s</p>"
+            "</div>"
+            "<div style='padding:10px 20px;border-top:1px solid #e5e7eb;font-size:11px;color:#6b7280;'>"
+            "<p style='margin:0;'>Este mensaje fue enviado por %s para fines de cumplimiento PLAFT.</p>"
+            "</div>"
+            "</div>"
+            "</div>"
+        ) % (company_name, fill_url, fill_url, company_name)
+        mail_vals = {
             "model": "compliance.assessment",
             "res_id": self.id,
             "email_to": self.partner_id.email,
+            "email_from": self.env.company.email or self.env.user.email or False,
             "subject": subject,
             "body_html": body,
-        }).send()
-        self.message_post(body=_("Invitación a encuesta enviada por email a %s.") % self.partner_id.email)
+        }
+        self.env["mail.mail"].sudo().create(mail_vals).send()
+        email_display = (self.partner_id.email and str(self.partner_id.email).strip()) or _("(sin correo)")
+        if email_display in ("0", "0.0"):
+            email_display = _("(sin correo)")
+        self.message_post(body=_("Invitación a encuesta enviada por email a %s.") % email_display)
         return {"type": "ir.actions.client", "tag": "display_notification", "params": {
             "title": _("Enviado"),
-            "message": _("Invitación enviada a %s.") % self.partner_id.email,
+            "message": _("Invitación enviada a %s.") % email_display,
             "type": "success",
             "sticky": False,
         }}

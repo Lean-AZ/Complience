@@ -1,38 +1,66 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Reporte KYC: preguntas y respuestas de la encuesta (listado, sin celdas) -->
+    <!-- Reporte KYC: preguntas y respuestas de la encuesta, en formato profesional tipo cuestionario -->
     <template id="report_compliance_kyc_pf_document">
         <t t-call="web.external_layout">
-            <main class="o_report_layout_standard" style="font-size: 11px;">
+            <main class="o_report_layout_standard" style="font-size: 10px; font-family: 'Helvetica', 'Arial', sans-serif;">
                 <t t-foreach="docs" t-as="o">
                     <t t-set="report_data" t-value="o._get_kyc_qa_report_data()"/>
-                    <t t-set="qa_list" t-value="report_data.get('qa_list', [])"/>
+                    <t t-set="qa_sections" t-value="o._get_kyc_qa_grouped_for_report()"/>
                     <t t-set="partner" t-value="report_data.get('partner', {})"/>
                     <t t-set="company_logo" t-value="report_data.get('company_logo')"/>
                     <div class="page">
-                        <div style="width:100%; display:flex; align-items:center; margin-bottom:12px;">
-                            <div style="flex:0 0 auto;">
+                        <!-- Encabezado tipo formulario institucional -->
+                        <div style="width:100%; display:flex; align-items:center; margin-bottom:18px; border-bottom:2px solid #1f2937; padding-bottom:8px;">
+                            <div style="flex:0 0 auto; text-align:left;">
                                 <img t-if="company_logo"
                                      t-att-src="'data:image/png;base64,%s' % company_logo"
-                                     style="max-height:40px;"/>
+                                     style="max-height:38px;"/>
                             </div>
                             <div style="flex:1 1 auto; text-align:center;">
-                                <h3 style="margin:0; font-size:14px;">Debida diligencia: respuestas de la encuesta</h3>
-                                <p style="margin:4px 0 0 0; font-size:12px;">
+                                <h3 style="margin:0; font-size:14px; text-transform:uppercase; letter-spacing:0.5px; color:#111827;">
+                                    Debida diligencia: respuestas del formulario KYC
+                                </h3>
+                                <p style="margin:4px 0 0 0; font-size:11px; color:#4b5563;">
                                     <strong><t t-esc="partner.get('name', '')"/></strong>
                                     <t t-if="partner.get('email')"> — <span t-esc="partner.get('email')"/></t>
                                 </p>
                             </div>
                         </div>
-                        <div style="margin-top:16px;">
-                            <t t-foreach="qa_list" t-as="item">
-                                <div style="margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid #eee;">
-                                    <div style="font-weight:bold; color:#333; margin-bottom:2px;" t-esc="item.get('question', '')"/>
-                                    <div style="color:#555; padding-left:8px;" t-esc="item.get('answer', '')"/>
-                                </div>
+                        <!-- Cuerpo estilo formulario: secciones y campos tipo "etiqueta : línea de respuesta" -->
+                        <div style="margin-top:10px;">
+                            <t t-if="qa_sections">
+                                <t t-foreach="qa_sections" t-as="section">
+                                    <!-- Encabezado de sección -->
+                                    <div style="margin:8px 0 4px 0; padding:4px 6px; background:#e5e7eb; border-radius:3px; border:1px solid #d1d5db; font-weight:bold; font-size:10px; text-transform:uppercase; color:#111827;">
+                                        <t t-esc="section.get('name')"/>
+                                    </div>
+                                    <!-- Campos de la sección en mini-bloques (hasta 3 por fila, usando bloques en línea) -->
+                                    <div style="width:100%; font-size:9px; margin-bottom:6px;">
+                                        <t t-set="items" t-value="section.get('items', [])"/>
+                                        <t t-set="idx" t-value="0"/>
+                                        <t t-foreach="items" t-as="item">
+                                            <t t-set="idx" t-value="idx + 1"/>
+                                            <div style="display:inline-block; width:32%; margin:0 1% 4px 0; vertical-align:top;">
+                                                <div style="font-size:8px; font-weight:bold; color:#111827; margin-bottom:1px;">
+                                                    <t t-esc="item.get('question')"/>
+                                                </div>
+                                                <div style="border-bottom:0.6px solid #9ca3af; min-height:11px; padding:0 1px; color:#111827;">
+                                                    <span t-if="item.get('answer')" t-esc="item.get('answer')"/>
+                                                    <span t-if="not item.get('answer')" style="color:#9ca3af; font-style:italic;">No respondida</span>
+                                                </div>
+                                            </div>
+                                            <t t-if="(idx % 3) == 0">
+                                                <div style="clear:both; height:0;"></div>
+                                            </t>
+                                        </t>
+                                    </div>
+                                </t>
                             </t>
-                            <t t-if="not qa_list">
-                                <p style="color:#888;"><em>No hay respuestas de encuesta registradas para esta evaluación.</em></p>
+                            <t t-if="not qa_sections">
+                                <p style="color:#6b7280; font-style:italic; margin-top:12px;">
+                                    No hay respuestas de encuesta registradas para esta evaluación.
+                                </p>
                             </t>
                         </div>
                     </div>

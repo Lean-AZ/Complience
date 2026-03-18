@@ -332,8 +332,115 @@ class SurveyUserInput(models.Model):
                         # No romper el cierre si por alguna razón el dump falla.
                         assessment.kyc_raw_json = False
 
+                # Copiar adjuntos subidos en la encuesta a la evaluación (survey_upload_file usa value_file_data_ids).
+                try:
+                    Attachment = self.env["ir.attachment"].sudo()
+                    created_names = set()
+                    # 1) Módulo survey_upload_file: adjuntos en user_input_line.value_file_data_ids
+                    for line in response.user_input_line_ids:
+                        q = line.question_id
+                        if not q or getattr(q, "question_type", "") != "upload_file":
+                            continue
+                        file_ids = getattr(line, "value_file_data_ids", None)
+                        if not file_ids:
+                            continue
+                        for src in file_ids:
+                            if not src.datas:
+                                continue
+                            name = src.name or (q.title or "Documento KYC").strip()
+                            if name in created_names:
+                                name = "%s (%s)" % (name, src.id)
+                            existing = Attachment.search([
+                                ("res_model", "=", "compliance.assessment"),
+                                ("res_id", "=", assessment.id),
+                                ("name", "=", name),
+                            ], limit=1)
+                            if existing:
+                                continue
+                            Attachment.create({
+                                "name": name,
+                                "type": "binary",
+                                "datas": src.datas,
+                                "mimetype": src.mimetype or "application/octet-stream",
+                                "res_model": "compliance.assessment",
+                                "res_id": assessment.id,
+                            })
+                            created_names.add(name)
+
+                    # 2) Fallback: adjuntos con res_model survey.user_input
+                    src_attachments = Attachment.search([
+                        ("res_model", "=", "survey.user_input"),
+                        ("res_id", "=", response.id),
+                    ])
+                    for src in src_attachments:
+                        if not src.datas:
+                            continue
+                        name = src.name or "Documento KYC"
+                        if name in created_names:
+                            name = "%s (%s)" % (name, src.id)
+                        existing = Attachment.search([
+                            ("res_model", "=", "compliance.assessment"),
+                            ("res_id", "=", assessment.id),
+                            ("name", "=", name),
+                        ], limit=1)
+                        if existing:
+                            continue
+                        Attachment.create({
+                            "name": name,
+                            "type": "binary",
+                            "datas": src.datas,
+                            "mimetype": src.mimetype or "application/octet-stream",
+                            "res_model": "compliance.assessment",
+                            "res_id": assessment.id,
+                        })
+                        created_names.add(name)
+
+                    # 3) Fallback: value_binary en la línea (otras implementaciones)
+                    for line in response.user_input_line_ids:
+                        q = line.question_id
+                        if not q or getattr(q, "question_type", "") != "upload_file":
+                            continue
+                        if getattr(line, "value_file_data_ids", None):
+                            continue
+                        bin_val = getattr(line, "value_binary", None)
+                        if not bin_val:
+                            continue
+                        name = (q.title or "Documento KYC").strip()
+                        if name in created_names:
+                            continue
+                        existing = Attachment.search([
+                            ("res_model", "=", "compliance.assessment"),
+                            ("res_id", "=", assessment.id),
+                            ("name", "=", name),
+                        ], limit=1)
+                        if existing:
+                            continue
+                        Attachment.create({
+                            "name": name,
+                            "type": "binary",
+                            "datas": bin_val,
+                            "mimetype": "application/octet-stream",
+                            "res_model": "compliance.assessment",
+                            "res_id": assessment.id,
+                        })
+                        created_names.add(name)
+
+                    if created_names:
+                        assessment.message_post(
+                            body=_("Documentos adjuntos de la encuesta copiados a esta evaluación (%s archivo(s)): %s.")
+                            % (len(created_names), ", ".join(sorted(created_names)[:5]) + ("…" if len(created_names) > 5 else "")),
+                        )
+                except Exception:
+                    pass
+
                 # Vincular la respuesta de encuesta a la evaluación para reportes (preguntas/respuestas).
                 assessment.user_input_id = response.id
+                # R-11/R-12: enviar automáticamente al cliente el imprimible y faltantes
+                try:
+                    assessment._send_completed_kyc_email(to_email=(response.partner_id.email or '').strip())
+                except Exception:
+                    # No romper el cierre de encuesta por un fallo de correo
+                    pass
 
         return res
 
