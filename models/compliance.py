@@ -12,6 +12,8 @@ import base64
 from odoo import models, fields, api, _
 from odoo.tools import safe_eval
 
+from .survey_input import _load_kyc_pf_mapping
+
 # Reintentos ante 429 (Too Many Requests) en dictamen
 _MAX_RETRIES_429 = 3
 _DELAY_429_SECONDS = (2, 5, 10)
@@ -485,7 +487,9 @@ class ComplianceAssessment(models.Model):
             'name': _('Corregir respuestas KYC'),
             'res_model': 'compliance.kyc.correction.wizard',
             'view_mode': 'form',
-            'target': 'new',
+            # Usamos target='current' para que el wizard se muestre a pantalla completa
+            # y aproveche las clases CSS de ancho completo definidas en el módulo.
+            'target': 'current',
             'context': {
                 'default_assessment_id': self.id,
                 'active_id': self.id,
@@ -597,6 +601,137 @@ class ComplianceAssessment(models.Model):
             'partner': partner_vals,
             'company_logo': company_logo,
         }
+
+    def _recompute_scores_from_user_input(self):
+        """Recalcula los puntajes de riesgo a partir de la respuesta de encuesta ligada.
+
+        Se usa cuando se corrigen manualmente respuestas KYC desde el wizard, para que
+        el scoring operativo (R-07) se actualice sin necesidad de que el cliente vuelva
+        a enviar el formulario.
+        """
+        self.ensure_one()
+        if not self.user_input_id:
+            return
+
+        response = self.user_input_id
+
+        scores = {
+            'funds': [],
+            'pep': [],
+            'activity': [],
+            'geo': [],
+            'volume': [],
+        }
+        volume_values = []
+        transfer_values = []
+
+        for line in response.user_input_line_ids:
+            title = (line.question_id.title or '').strip().lower()
+            points = line.answer_score
+
+            # Volumen Mensual (USD)
+            if any(k in title for k in ['volumen mensual', 'mensual (usd)', 'volumen mensual (usd)']):
+                raw_num = getattr(line, 'value_numerical_box', None)
+                if raw_num is None and getattr(line, 'value_char_box', None):
+                    try:
+                        raw_num = float(str(line.value_char_box).replace(',', '').strip())
+                    except (TypeError, ValueError):
+                        raw_num = None
+                if raw_num is not None:
+                    volume_values.append(float(raw_num))
+                continue
+
+            # Cantidad de transferencias
+            if any(k in title for k in ['cantidad de transferencias', 'número de transferencias', 'numero de transferencias', 'transferencias iniciales']):
+                raw_num = getattr(line, 'value_numerical_box', None)
+                if raw_num is None and getattr(line, 'value_char_box', None):
+                    try:
+                        raw_num = float(str(line.value_char_box).replace(',', '').strip())
+                    except (TypeError, ValueError):
+                        raw_num = None
+                if raw_num is not None:
+                    transfer_values.append(int(raw_num))
+                continue
+
+            # Origen de Fondos
+            if any(k in title for k in ['origen', 'fondos', 'recursos', 'ingresos', 'donaciones']):
+                scores['funds'].append(points)
+            # PEP / Beneficiario Final
+            elif any(k in title for k in ['pep', 'accionista', 'ejecutivo', 'beneficiario', 'compleja']):
+                scores['pep'].append(points)
+            # Actividad económica
+            elif any(k in title for k in ['actividad', 'negocio', 'industria', 'estado', 'fiduciaria', 'vínculos']):
+                scores['activity'].append(points)
+            # Geografía y nacionalidad
+            elif any(k in title for k in ['país', 'nacionalidad', 'jurisdicción', 'internacionales']):
+                scores['geo'].append(points)
+            # Volumen transaccional / El Bulto
+            elif any(k in title for k in [
+                'volumen',
+                'transaccional',
+                'bulto',
+                '250,000',
+                'cuentas',
+                'monto mensual',
+                'rango monto mensual',
+            ]):
+                scores['volume'].append(points)
+
+        vals = {}
+        if scores['funds']:
+            vals['origin_funds_score'] = max(scores['funds'])
+        if scores['pep']:
+            vals['pep_score'] = max(scores['pep'])
+        if scores['activity']:
+            vals['economic_activity_score'] = max(scores['activity'])
+        if scores['geo']:
+            vals['nationality_score'] = max(scores['geo'])
+        if scores['volume']:
+            vals['transaction_bulto_score'] = max(scores['volume'])
+        if volume_values:
+            vals['transaccional_volume'] = max(volume_values)
+        if transfer_values:
+            vals['transfer_count'] = int(max(transfer_values))
+
+        if vals:
+            self.write(vals)
+
+    def _refresh_kyc_raw_json_from_user_input(self):
+        """Actualiza kyc_raw_json a partir de las líneas de la encuesta (tras correcciones)."""
+        self.ensure_one()
+        if not self.user_input_id:
+            return
+        kyc_mapping = _load_kyc_pf_mapping()
+        kyc_raw = {}
+        for line in self.user_input_id.user_input_line_ids:
+            title = (line.question_id.title or '').strip().lower()
+            if not title:
+                continue
+            cfg = kyc_mapping.get(title)
+            if not cfg:
+                continue
+            tech = cfg["tech"]
+            raw_val = (
+                getattr(line, 'value_char_box', None)
+                or getattr(line, 'value_text_box', None)
+                or getattr(line, 'value_numerical_box', None)
+            )
+            if raw_val is None and getattr(line, 'suggested_answer_id', None) and line.suggested_answer_id.value:
+                raw_val = line.suggested_answer_id.value
+            if raw_val is None and getattr(line, 'value_date', None):
+                raw_val = str(line.value_date)
+            if raw_val is None and getattr(line, 'value_datetime', None):
+                raw_val = str(line.value_datetime)
+            if raw_val is None and getattr(line, 'answer_score', None) is not None:
+                raw_val = line.answer_score
+            if raw_val is None:
+                continue
+            raw_str = str(raw_val).strip()
+            kyc_raw[tech] = raw_str
+        try:
+            self.kyc_raw_json = json.dumps(kyc_raw, ensure_ascii=False) if kyc_raw else ''
+        except Exception:
+            pass
 
     @api.depends('origin_funds_score', 'economic_activity_score', 'pep_score', 
                  'nationality_score', 'transaction_bulto_score', 'ai_penalty', 'profile_id')

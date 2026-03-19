@@ -23,7 +23,11 @@ class ComplianceKycCorrectionWizard(models.TransientModel):
     @api.model
     def default_get(self, fields_list):
         res = super().default_get(fields_list)
-        assessment_id = self.env.context.get('active_id') or res.get('assessment_id')
+        assessment_id = (
+            self.env.context.get('active_id')
+            or self.env.context.get('default_assessment_id')
+            or res.get('assessment_id')
+        )
         if not assessment_id:
             return res
         assessment = self.env['compliance.assessment'].browse(assessment_id)
@@ -39,22 +43,33 @@ class ComplianceKycCorrectionWizard(models.TransientModel):
                 'input_line_id': line.id,
                 'question_title': (line.question_id.title or '').strip() or _('Pregunta'),
                 'answer_type': line.answer_type or '',
-                'value_char_box': line.value_char_box or '',
-                'value_text_box': line.value_text_box or '',
-                'value_numerical_box': line.value_numerical_box if line.answer_type == 'numerical_box' else 0.0,
-                'value_date': line.value_date,
-                'value_datetime': line.value_datetime,
-                'suggested_answer_id': line.suggested_answer_id.id if line.suggested_answer_id else False,
             }))
         res['assessment_id'] = assessment.id
         res['line_ids'] = lines_vals
         return res
 
     def action_apply(self):
-        """Cierra el asistente; las correcciones ya se propagaron al escribir cada línea."""
+        """Aplica todas las correcciones al formulario original y cierra el asistente.
+
+        Las líneas del wizard editan directamente las respuestas originales del survey
+        mediante campos related, por lo que aquí solo recalcualmos scoring y KYC.
+        """
         self.ensure_one()
+        assessment = self.assessment_id
+        # Recalcular scoring y actualizar copia KYC de la evaluación
+        if assessment:
+            assessment._recompute_scores_from_user_input()
+            assessment._refresh_kyc_raw_json_from_user_input()
         return {
-            'type': 'ir.actions.act_window_close',
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Correcciones aplicadas'),
+                'message': _('Los cambios se han guardado en el formulario original. El scoring y el resumen KYC se han actualizado.'),
+                'type': 'success',
+                'sticky': False,
+                'next': {'type': 'ir.actions.act_window_close'},
+            },
         }
 
 
@@ -71,9 +86,8 @@ class ComplianceKycCorrectionWizardLine(models.TransientModel):
     input_line_id = fields.Many2one(
         'survey.user_input.line',
         string='Respuesta original',
-        required=False,
+        required=True,
         ondelete='cascade',
-        readonly=True,
     )
     question_title = fields.Char(string='Pregunta', readonly=True)
     answer_type = fields.Selection([
@@ -84,54 +98,68 @@ class ComplianceKycCorrectionWizardLine(models.TransientModel):
         ('datetime', 'Fecha y hora'),
         ('suggestion', 'Opción elegida'),
     ], string='Tipo', readonly=True)
-    value_char_box = fields.Char(string='Respuesta (texto)')
-    value_text_box = fields.Text(string='Respuesta (texto largo)')
-    value_numerical_box = fields.Float(string='Respuesta (número)')
-    value_date = fields.Date(string='Respuesta (fecha)')
-    value_datetime = fields.Datetime(string='Respuesta (fecha y hora)')
+    # Campos de respuesta: apuntan directamente a la línea original del survey
+    value_char_box = fields.Char(
+        string='Respuesta (texto)',
+        related='input_line_id.value_char_box',
+        readonly=False,
+    )
+    value_text_box = fields.Text(
+        string='Respuesta (texto largo)',
+        related='input_line_id.value_text_box',
+        readonly=False,
+    )
+    value_numerical_box = fields.Float(
+        string='Respuesta (número)',
+        related='input_line_id.value_numerical_box',
+        readonly=False,
+    )
+    value_date = fields.Date(
+        string='Respuesta (fecha)',
+        related='input_line_id.value_date',
+        readonly=False,
+    )
+    value_datetime = fields.Datetime(
+        string='Respuesta (fecha y hora)',
+        related='input_line_id.value_datetime',
+        readonly=False,
+    )
     suggested_answer_id = fields.Many2one(
         'survey.question.answer',
         string='Respuesta (opción)',
-        domain="[('question_id', '=', question_id)]",
+        related='input_line_id.suggested_answer_id',
+        readonly=False,
     )
     question_id = fields.Many2one(
         'survey.question',
         related='input_line_id.question_id',
         readonly=True,
     )
+    value_display = fields.Char(
+        string='Respuesta',
+        compute='_compute_value_display',
+        help='Valor actual de la respuesta para mostrar en la lista.',
+    )
 
-    def _propagate_to_input_line(self, vals):
-        """Escribe en la línea original del survey según el tipo de respuesta."""
+    @api.depends(
+        'value_char_box', 'value_text_box', 'value_numerical_box',
+        'value_date', 'value_datetime', 'suggested_answer_id', 'answer_type',
+    )
+    def _compute_value_display(self):
         for line in self:
-            if not line.input_line_id:
-                continue
-            update = {}
-            answer_type = line.answer_type
-            # Usamos los valores ya escritos en el wizard (line), no en vals crudo
-            if answer_type == 'char_box':
-                update['value_char_box'] = line.value_char_box or ''
-            elif answer_type == 'text_box':
-                update['value_text_box'] = line.value_text_box or ''
-            elif answer_type == 'numerical_box':
-                update['value_numerical_box'] = line.value_numerical_box
-            elif answer_type == 'date':
-                update['value_date'] = line.value_date
-            elif answer_type == 'datetime':
-                update['value_datetime'] = line.value_datetime
-            elif answer_type == 'suggestion':
-                update['suggested_answer_id'] = line.suggested_answer_id.id if line.suggested_answer_id else False
-            if update:
-                line.input_line_id.write(update)
+            at = line.answer_type or ''
+            if at == 'char_box' and line.value_char_box:
+                line.value_display = (line.value_char_box or '').strip()[:200]
+            elif at == 'text_box' and line.value_text_box:
+                line.value_display = (line.value_text_box or '').strip()[:200]
+            elif at == 'numerical_box' and line.value_numerical_box is not None:
+                line.value_display = str(line.value_numerical_box)
+            elif at == 'date' and line.value_date:
+                line.value_display = str(line.value_date)
+            elif at == 'datetime' and line.value_datetime:
+                line.value_display = str(line.value_datetime)
+            elif at == 'suggestion' and line.suggested_answer_id:
+                line.value_display = (line.suggested_answer_id.value or '').strip()[:200]
+            else:
+                line.value_display = ''
 
-    def write(self, vals):
-        res = super().write(vals)
-        # Cada vez que el usuario cambia una respuesta en el wizard,
-        # propagamos inmediatamente el cambio al survey original.
-        self._propagate_to_input_line(vals)
-        return res
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        records = super().create(vals_list)
-        records._propagate_to_input_line({})
-        return records

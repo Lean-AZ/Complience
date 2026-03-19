@@ -13,7 +13,8 @@
                     <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_report_compliance_kyc_pf" string="Imprimir preguntas y respuestas" type="object" class="btn-secondary" invisible="not partner_id"/>
                     <button name="action_report_compliance_scoring" string="Imprimir análisis de riesgo" type="object" class="btn-secondary" invisible="not partner_id"/>
-                    <button name="action_open_kyc_correction_wizard" string="Corregir respuestas KYC" type="object" class="btn-secondary" invisible="not user_input_id or not survey_id"/>
+                    <!-- En lugar del wizard, abrimos la participación estándar de Odoo para editar las respuestas -->
+                    <button name="action_edit_kyc_answers" string="Corregir respuestas KYC" type="object" class="btn-secondary" invisible="not user_input_id"/>
                     <button name="action_approve" string="Aprobar Cliente" type="object" class="oe_highlight" invisible="state == 'approved'"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved"/>
                 </header>
