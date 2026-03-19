@@ -17,6 +17,10 @@
             <field name="key">ghr_compliance.reminder_days</field>
             <field name="value">7</field>
         </record>
+        <record id="param_pending_docs_expiry_hours" model="ir.config_parameter">
+            <field name="key">ghr_compliance.pending_docs_expiry_hours</field>
+            <field name="value">48</field>
+        </record>
         <record id="param_validity_months" model="ir.config_parameter">
             <field name="key">ghr_compliance.validity_months</field>
             <field name="value">12</field>
@@ -29,14 +33,22 @@
             <field name="interval_number">1</field>
             <field name="interval_type">days</field>
         </record>
+        <record id="ir_cron_remind_pending_documents_expiry" model="ir.cron">
+            <field name="name">Compliance: recordatorio documentos pendientes vencidos</field>
+            <field name="model_id" ref="model_compliance_assessment"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_remind_pending_documents_expiry()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+        </record>
 
         <!-- Perfiles de umbrales por defecto: el operador puede modificarlos desde Compliance > Configuración -->
         <record id="profile_default" model="compliance.risk.profile">
             <field name="name">Default</field>
             <field name="volume_limit_usd">15000</field>
             <field name="transfer_count_limit">3</field>
-            <field name="score_threshold_medium">36</field>
-            <field name="score_threshold_high">71</field>
+            <field name="score_threshold_medium">1.8</field>
+            <field name="score_threshold_high">3.5</field>
             <!-- Pesos base equivalentes a los defaults del modelo -->
             <field name="weight_origin_funds">0.30</field>
             <field name="weight_economic_activity">0.25</field>
@@ -51,8 +63,8 @@
             <field name="name">Perfil KYC - Vinculación inicial</field>
             <field name="volume_limit_usd">15000</field>
             <field name="transfer_count_limit">3</field>
-            <field name="score_threshold_medium">36</field>
-            <field name="score_threshold_high">71</field>
+            <field name="score_threshold_medium">1.8</field>
+            <field name="score_threshold_high">3.5</field>
             <!-- Suma 1.0: 0.25 + 0.20 + 0.15 + 0.20 + 0.20 -->
             <field name="weight_origin_funds">0.25</field>
             <field name="weight_economic_activity">0.20</field>
@@ -67,8 +79,8 @@
             <field name="name">Perfil KYC - Monitoreo continuo</field>
             <field name="volume_limit_usd">15000</field>
             <field name="transfer_count_limit">3</field>
-            <field name="score_threshold_medium">36</field>
-            <field name="score_threshold_high">71</field>
+            <field name="score_threshold_medium">1.8</field>
+            <field name="score_threshold_high">3.5</field>
             <!-- Suma 1.0: 0.20 + 0.15 + 0.15 + 0.20 + 0.30 -->
             <field name="weight_origin_funds">0.20</field>
             <field name="weight_economic_activity">0.15</field>
@@ -81,8 +93,8 @@
             <field name="name">Constructora</field>
             <field name="volume_limit_usd">400000</field>
             <field name="transfer_count_limit">3</field>
-            <field name="score_threshold_medium">36</field>
-            <field name="score_threshold_high">71</field>
+            <field name="score_threshold_medium">1.8</field>
+            <field name="score_threshold_high">3.5</field>
             <!-- Se parte de los mismos pesos base; el usuario puede ajustarlos -->
             <field name="weight_origin_funds">0.30</field>
             <field name="weight_economic_activity">0.25</field>
@@ -94,8 +106,8 @@
             <field name="name">Dealer</field>
             <field name="volume_limit_usd">15000</field>
             <field name="transfer_count_limit">3</field>
-            <field name="score_threshold_medium">36</field>
-            <field name="score_threshold_high">71</field>
+            <field name="score_threshold_medium">1.8</field>
+            <field name="score_threshold_high">3.5</field>
             <field name="weight_origin_funds">0.30</field>
             <field name="weight_economic_activity">0.25</field>
             <field name="weight_pep">0.20</field>

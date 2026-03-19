@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Añade columnas de ghr_compliance a res_partner si no existen (install/upgrade)."""
 
+from odoo import api, SUPERUSER_ID
+
 
 def _add_res_partner_columns(cr):
     """Idempotent: añade columnas de cumplimiento a res_partner."""
@@ -34,3 +36,13 @@ def _add_res_partner_columns(cr):
 def post_init_hook(cr, registry):
     """Se ejecuta tras instalar el módulo."""
     _add_res_partner_columns(cr)
+
+    # Limpia mapeos obsoletos automáticamente:
+    # si eliminamos preguntas del template (survey), los mapeos anteriores también deben desaparecer
+    # para que el operador no los vea marcados/rojos en la interfaz.
+    try:
+        env = api.Environment(cr, SUPERUSER_ID, {})
+        env["compliance.question.mapping"].sudo().action_clean_obsolete_mappings()
+    except Exception:
+        # No bloquear upgrade si la limpieza falla; el botón existe igualmente en UI.
+        pass

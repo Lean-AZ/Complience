@@ -20,7 +20,7 @@
                             <tr><td>Puntos Transacción Bulto (1-10)</td><td><t t-esc="o.transaction_bulto_score"/></td></tr>
                             <tr><td>Volumen mensual (USD)</td><td><t t-esc="int(o.transaccional_volume) if o.transaccional_volume else 0"/></td></tr>
                             <tr><td>Cantidad de transferencias</td><td><t t-esc="o.transfer_count or 0"/></td></tr>
-                            <tr><td><strong>Score total (0-100)</strong></td><td><strong><t t-esc="'%.1f' % o.risk_score"/></strong></td></tr>
+                            <tr><td><strong>Score total (0-5)</strong></td><td><strong><t t-esc="'%.1f' % o.risk_score"/></strong></td></tr>
                             <tr><td><strong>Nivel de riesgo</strong></td><td><strong><t t-esc="dict(low='Bajo (Verde)', medium='Medio (Amarillo)', high='Alto (Rojo)').get(o.risk_level, o.risk_level)"/></strong></td></tr>
                         </table>
                         <div t-if="o.risk_alert_message" class="alert alert-warning" t-field="o.risk_alert_message" t-options='{"widget": "html"}'/>

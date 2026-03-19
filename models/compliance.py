@@ -94,18 +94,18 @@ class ComplianceAssessment(models.Model):
     transfer_count = fields.Integer(string="Cantidad de Transferencias (Inicial)", default=1, tracking=True)
 
     # Variables del Cuentagotas (Puntos del 1 al 10)
-    origin_funds_score = fields.Integer(string="Puntos: Origen de Fondos (1-10)", default=1) 
-    economic_activity_score = fields.Integer(string="Puntos: Actividad Economica (1-10)", default=1)   
+    origin_funds_score = fields.Integer(string="Puntos: Origen de Fondos (1-10)", default=0)
+    economic_activity_score = fields.Integer(string="Puntos: Actividad Economica (1-10)", default=0)
     pep_score = fields.Integer(string="Puntos: PEP (0-10)", default=0)                     
-    nationality_score = fields.Integer(string="Puntos: Nacionalidad (1-10)", default=1)    
-    transaction_bulto_score = fields.Integer(string="Puntos: Transacción Bulto (1-10)", default=1)   
+    nationality_score = fields.Integer(string="Puntos: Nacionalidad (1-10)", default=0)
+    transaction_bulto_score = fields.Integer(string="Puntos: Transacción Bulto (1-10)", default=0)
     
     # IA y Castigo
     ai_penalty = fields.Integer(string="Castigo IA (Macos)", default=0) 
     ai_report = fields.Html(string="Resumen del Chivatazo IA")
 
-    # Resultado Final Computado
-    risk_score = fields.Float(string="Score Total (0-100)", compute="_compute_total_risk", store=True)
+    # Resultado Final Computado (R-14: escala 0-5, techo máximo 5.0)
+    risk_score = fields.Float(string="Score Total (0-5)", compute="_compute_total_risk", store=True)
     risk_level = fields.Selection([
         ('low', 'Bajo (Verde)'),
         ('medium', 'Medio (Amarillo)'),
@@ -207,8 +207,24 @@ class ComplianceAssessment(models.Model):
         sanitize=False,
     )
 
+    pending_documents_count = fields.Integer(
+        string="Documentos pendientes",
+        compute="_compute_pending_documents_count",
+    )
+
     # Cache simple para mapear título de pregunta -> sección (desde CSV KYC PF)
     _KYC_SECTION_CACHE = None
+
+    @api.depends("user_input_id")
+    def _compute_pending_documents_count(self):
+        PendingDoc = self.env["compliance.kyc.pending.document"].sudo()
+        for rec in self:
+            rec.pending_documents_count = PendingDoc.search_count(
+                [
+                    ("assessment_id", "=", rec.id),
+                    ("status", "=", "pending"),
+                ]
+            )
 
     def _build_ai_profile_prompt(self):
         self.ensure_one()
@@ -250,9 +266,13 @@ class ComplianceAssessment(models.Model):
                 if qa_list:
                     # Agrupamos preguntas por sección de la encuesta
                     sections = {}
+                    no_answer_token = (_("No respondidada") or "").strip().lower()
                     for item in qa_list:
                         q = (item.get('question') or '').strip()
                         a = (item.get('answer') or '').strip()
+                        # El preview debe mostrar solo respuestas realmente provistas
+                        if not a or a.lower() == no_answer_token:
+                            continue
                         key = q.lower()
                         section = section_map.get(key) or _("Otras preguntas")
                         sections.setdefault(section, []).append((q, a))
@@ -389,22 +409,28 @@ class ComplianceAssessment(models.Model):
         _debug_log("076c93", "H1", "compliance.py:_get_thresholds", "entry", {"rec_id": self.id, "profile_id": self.profile_id.id if self.profile_id else None})
         # #endregion
         if self.profile_id:
+            p = self.profile_id
+            # Umbrales en escala 0-5; si vienen en escala antigua 0-100, convertir
+            sm, sh = p.score_threshold_medium, p.score_threshold_high
+            if (sm or 0) > 10 or (sh or 0) > 10:
+                sm, sh = (sm or 36) / 20.0, (sh or 71) / 20.0
             return {
-                'volume_limit': self.profile_id.volume_limit_usd,
-                'transfer_limit': self.profile_id.transfer_count_limit,
-                'score_medium': self.profile_id.score_threshold_medium,
-                'score_high': self.profile_id.score_threshold_high,
-                'w_origin': self.profile_id.weight_origin_funds,
-                'w_activity': self.profile_id.weight_economic_activity,
-                'w_pep': self.profile_id.weight_pep,
-                'w_geo': self.profile_id.weight_nationality,
-                'w_volume': self.profile_id.weight_transaction_bulto,
+                'volume_limit': p.volume_limit_usd,
+                'transfer_limit': p.transfer_count_limit,
+                'score_medium': sm,
+                'score_high': sh,
+                'w_origin': p.weight_origin_funds,
+                'w_activity': p.weight_economic_activity,
+                'w_pep': p.weight_pep,
+                'w_geo': p.weight_nationality,
+                'w_volume': p.weight_transaction_bulto,
             }
+        # Umbrales en escala 0-5 (R-14)
         return {
             'volume_limit': 15000.0,
             'transfer_limit': 3,
-            'score_medium': 36,
-            'score_high': 71,
+            'score_medium': 1.8,
+            'score_high': 3.5,
             'w_origin': 0.30,
             'w_activity': 0.25,
             'w_pep': 0.20,
@@ -522,6 +548,26 @@ class ComplianceAssessment(models.Model):
         action['context'] = ctx
         return action
 
+    def action_open_pending_documents_wizard(self):
+        """Abre el wizard para subir documentos pendientes (R-19)."""
+        self.ensure_one()
+        if self.pending_documents_count <= 0:
+            raise UserError(_("No hay documentos pendientes para esta evaluación."))
+
+        form_view = self.env.ref(
+            "ghr_compliance.view_compliance_pending_documents_wizard_form",
+            raise_if_not_found=False,
+        )
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Documentos pendientes (KYC)"),
+            "res_model": "compliance.pending.documents.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "views": ([(form_view.id, "form")] if form_view else []),
+            "context": {"default_assessment_id": self.id},
+        }
+
     def _get_kyc_qa_report_data(self):
         """Lista de preguntas y respuestas tal como el usuario las envió (para R-05).
 
@@ -627,7 +673,7 @@ class ComplianceAssessment(models.Model):
 
         for line in response.user_input_line_ids:
             title = (line.question_id.title or '').strip().lower()
-            points = line.answer_score
+            points = line.answer_score if line.answer_score is not None else None
 
             # Volumen Mensual (USD)
             if any(k in title for k in ['volumen mensual', 'mensual (usd)', 'volumen mensual (usd)']):
@@ -653,29 +699,51 @@ class ComplianceAssessment(models.Model):
                     transfer_values.append(int(raw_num))
                 continue
 
-            # Origen de Fondos
-            if any(k in title for k in ['origen', 'fondos', 'recursos', 'ingresos', 'donaciones']):
-                scores['funds'].append(points)
+            # Geografía y nacionalidad (prioridad)
+            # Incluye EE.UU./US Person para capturar preguntas con scoring asociadas a nationality_score.
+            if any(
+                k in title
+                for k in [
+                    'país',
+                    'nacionalidad',
+                    'jurisdicción',
+                    'internacionales',
+                    'ee.uu',
+                    'us person',
+                    'residente',
+                    'ciudadano',
+                ]
+            ):
+                if points is not None:
+                    scores['geo'].append(points)
+
+            # Origen de Fondos (solo fondos/recursos/ingresos/donaciones; no capturar "País de origen...")
+            elif any(k in title for k in ['fondos', 'recursos', 'ingresos', 'donaciones']):
+                if points is not None:
+                    scores['funds'].append(points)
+
             # PEP / Beneficiario Final
             elif any(k in title for k in ['pep', 'accionista', 'ejecutivo', 'beneficiario', 'compleja']):
-                scores['pep'].append(points)
+                if points is not None:
+                    scores['pep'].append(points)
+
             # Actividad económica
             elif any(k in title for k in ['actividad', 'negocio', 'industria', 'estado', 'fiduciaria', 'vínculos']):
-                scores['activity'].append(points)
-            # Geografía y nacionalidad
-            elif any(k in title for k in ['país', 'nacionalidad', 'jurisdicción', 'internacionales']):
-                scores['geo'].append(points)
+                if points is not None:
+                    scores['activity'].append(points)
+
             # Volumen transaccional / El Bulto
             elif any(k in title for k in [
                 'volumen',
                 'transaccional',
                 'bulto',
                 '250,000',
-                'cuentas',
                 'monto mensual',
                 'rango monto mensual',
+                'transacciones',
             ]):
-                scores['volume'].append(points)
+                if points is not None:
+                    scores['volume'].append(points)
 
         vals = {}
         if scores['funds']:
@@ -734,28 +802,35 @@ class ComplianceAssessment(models.Model):
             pass
 
     @api.depends('origin_funds_score', 'economic_activity_score', 'pep_score', 
-                 'nationality_score', 'transaction_bulto_score', 'ai_penalty', 'profile_id')
+                 'nationality_score', 'transaction_bulto_score', 'ai_penalty', 'profile_id',
+                 'kyc_is_pep_flag')
     def _compute_total_risk(self):
         # #region agent log
         _debug_log("076c93", "H1", "compliance.py:_compute_total_risk", "entry", {"ids": self.ids})
         # #endregion
+        RISK_CEILING = 5.0  # R-14: techo máximo absoluto 5.0 puntos
         for rec in self:
             th = rec._get_thresholds()
-            # Cálculo ponderado con pesos configurables por perfil
+            # R-15: Descalificación automática (reglas de exclusión). PEP → score 5.0 sin importar el resto.
+            if rec.kyc_is_pep_flag or (rec.pep_score and rec.pep_score >= 8):
+                rec.risk_score = RISK_CEILING
+                rec.risk_level = 'high'
+                if rec.state != 'approved':
+                    rec.state = 'blocked'
+                continue
+            # Cálculo ponderado con pesos configurables por perfil (escala interna 0-100)
             base_score = (
                 (rec.origin_funds_score * th['w_origin']) +
                 (rec.economic_activity_score * th['w_activity']) +
                 (rec.pep_score * th['w_pep']) +
                 (rec.nationality_score * th['w_geo']) +
                 (rec.transaction_bulto_score * th['w_volume'])
-            ) * 10 
+            ) * 10
 
-            # Ajustes adicionales por parámetros de riesgo (país, banco, cliente)
             parameter_penalty = 0.0
             partner = rec.partner_id
             if partner:
                 RiskParam = rec.env['compliance.risk.parameter'].sudo()
-                # Por país de nacionalidad
                 if partner.country_id:
                     params_country = RiskParam.search([
                         ('parameter_type', '=', 'country'),
@@ -764,7 +839,6 @@ class ComplianceAssessment(models.Model):
                     ])
                     if params_country:
                         parameter_penalty += max(params_country.mapped('base_score')) * 10
-                # Por banco asociado (bank_ids son res.partner.bank; necesitamos los res.bank)
                 if hasattr(partner, 'bank_ids') and partner.bank_ids:
                     bank_ids = partner.bank_ids.mapped('bank_id').filtered(lambda b: b).ids
                     if bank_ids:
@@ -775,7 +849,6 @@ class ComplianceAssessment(models.Model):
                         ])
                         if params_bank:
                             parameter_penalty += max(params_bank.mapped('base_score')) * 10
-                # Parámetro directo por cliente
                 params_partner = RiskParam.search([
                     ('parameter_type', '=', 'partner'),
                     ('partner_id', '=', partner.id),
@@ -784,13 +857,15 @@ class ComplianceAssessment(models.Model):
                 if params_partner:
                     parameter_penalty += max(params_partner.mapped('base_score')) * 10
 
-            total = base_score + rec.ai_penalty + parameter_penalty
-            rec.risk_score = total
+            total_100 = base_score + rec.ai_penalty + parameter_penalty
+            # R-14: escala 0-5 y techo 5.0 (100 → 5.0)
+            rec.risk_score = min(RISK_CEILING, total_100 / 20.0)
 
-            if total >= th['score_high']:
+            if rec.risk_score >= th['score_high']:
                 rec.risk_level = 'high'
-                if rec.state != 'approved': rec.state = 'blocked'
-            elif total >= th['score_medium']:
+                if rec.state != 'approved':
+                    rec.state = 'blocked'
+            elif rec.risk_score >= th['score_medium']:
                 rec.risk_level = 'medium'
             else:
                 rec.risk_level = 'low'
@@ -903,7 +978,7 @@ class ComplianceAssessment(models.Model):
             _("- Volumen mensual declarado (USD): %s") % (int(self.transaccional_volume) if self.transaccional_volume else _("No declarado")),
             _("- Cantidad de transferencias (inicial): %s") % (self.transfer_count or 0),
             _("- Nivel de riesgo calculado: %s") % riesgo,
-            _("- Score total (0-100): %s") % (round(self.risk_score, 1) if self.risk_score else 0),
+            _("- Score total (0-5): %s") % (round(self.risk_score, 1) if self.risk_score else 0),
         ]
         return "\n".join(lines)
 
@@ -1135,6 +1210,24 @@ class ComplianceAssessment(models.Model):
         if not self.survey_id or not self.user_input_id:
             return []
 
+        # Si ya existe el modelo de R-18, preferimos esa fuente de verdad
+        try:
+            PendingDoc = self.env["compliance.kyc.pending.document"].sudo()
+            missing_docs = PendingDoc.search(
+                [
+                    ("assessment_id", "=", self.id),
+                    ("status", "=", "missing"),
+                ]
+            )
+            if missing_docs:
+                return [
+                    {"title": (d.title or "").strip(), "required": bool(d.required)}
+                    for d in missing_docs
+                    if (d.title or "").strip()
+                ]
+        except Exception:
+            pass
+
         SurveyQuestion = self.env["survey.question"].sudo()
         questions = SurveyQuestion.search([
             ("survey_id", "=", self.survey_id.id),
@@ -1215,21 +1308,70 @@ class ComplianceAssessment(models.Model):
             except Exception:
                 pdf_attachment_id = False
 
+        PendingDoc = self.env["compliance.kyc.pending.document"].sudo()
+        pending_docs = PendingDoc.search(
+            [
+                ("assessment_id", "=", self.id),
+                ("status", "=", "pending"),
+            ],
+        )
+
         missing = self._get_missing_documents()
         missing_required = [m["title"] for m in missing if m.get("required")]
         missing_optional = [m["title"] for m in missing if not m.get("required")]
+
+        pending_html = ""
+        if pending_docs:
+            pending_required = []
+            pending_optional = []
+            for d in pending_docs:
+                dl = ""
+                if d.deadline:
+                    try:
+                        dl_dt = fields.Datetime.context_timestamp(self.env.user, d.deadline)
+                        dl = dl_dt.strftime("%d/%m/%Y %H:%M")
+                    except Exception:
+                        dl = ""
+                title = (d.title or "").strip()
+                if not title:
+                    continue
+                if dl:
+                    title = "%s (vence: %s)" % (title, dl)
+                if d.required:
+                    pending_required.append(title)
+                else:
+                    pending_optional.append(title)
+
+            parts = []
+            if pending_required:
+                parts.append(
+                    "<p style='margin:10px 0 6px;'><b>Documentos requeridos pendientes (\"Adjuntaré más tarde\"):</b></p>"
+                    "<ul style='margin:0 0 8px 18px;'>%s</ul>"
+                    % ("".join("<li>%s</li>" % html.escape(t) for t in pending_required))
+                )
+            if pending_optional:
+                parts.append(
+                    "<p style='margin:10px 0 6px;'><b>Documentos adicionales pendientes (\"Adjuntaré más tarde\"):</b></p>"
+                    "<ul style='margin:0 0 8px 18px;'>%s</ul>"
+                    % ("".join("<li>%s</li>" % html.escape(t) for t in pending_optional))
+                )
+            pending_html = "".join(parts)
 
         missing_html = ""
         if missing_required or missing_optional:
             parts = []
             if missing_required:
-                parts.append("<p style='margin:10px 0 6px;'><b>Documentos requeridos pendientes:</b></p><ul style='margin:0 0 8px 18px;'>%s</ul>" % (
-                    "".join("<li>%s</li>" % html.escape(t) for t in missing_required)
-                ))
+                parts.append(
+                    "<p style='margin:10px 0 6px;'><b>Documentos requeridos faltantes:</b></p>"
+                    "<ul style='margin:0 0 8px 18px;'>%s</ul>"
+                    % ("".join("<li>%s</li>" % html.escape(t) for t in missing_required))
+                )
             if missing_optional:
-                parts.append("<p style='margin:10px 0 6px;'><b>Documentos adicionales sugeridos:</b></p><ul style='margin:0 0 8px 18px;'>%s</ul>" % (
-                    "".join("<li>%s</li>" % html.escape(t) for t in missing_optional)
-                ))
+                parts.append(
+                    "<p style='margin:10px 0 6px;'><b>Documentos adicionales sugeridos:</b></p>"
+                    "<ul style='margin:0 0 8px 18px;'>%s</ul>"
+                    % ("".join("<li>%s</li>" % html.escape(t) for t in missing_optional))
+                )
             missing_html = "".join(parts)
 
         subject = _("Confirmación: formulario KYC recibido (%s)") % (self.name or "")
@@ -1257,7 +1399,7 @@ class ComplianceAssessment(models.Model):
             "</div>"
             "</div>"
             "</div>"
-        ) % (company_name, partner_name, missing_html or "", company_name)
+        ) % (company_name, partner_name, (pending_html + missing_html) or "", company_name)
 
         vals = {
             "model": "compliance.assessment",
@@ -1272,7 +1414,7 @@ class ComplianceAssessment(models.Model):
         self.env["mail.mail"].sudo().create(vals).send()
         # Evidencia interna en la evaluación (email siempre como texto legible)
         email_display = to_email if isinstance(to_email, str) else (self.partner_id.email or _("(sin correo)"))
-        self.message_post(body=_("Imprimible KYC y lista de documentos faltantes enviados por email a %s.") % email_display)
+        self.message_post(body=_("Imprimible KYC y lista de documentos pendientes/faltantes enviados por email a %s.") % email_display)
         return True
 
     def action_report_compliance_scoring(self):
@@ -1485,6 +1627,65 @@ class ComplianceAssessment(models.Model):
                 "body_html": body,
             }).send()
 
+    @api.model
+    def _cron_remind_pending_documents_expiry(self):
+        """R-20: cuando venza la caducidad de documentos pendientes, marcar expired y notificar."""
+        PendingDoc = self.env["compliance.kyc.pending.document"].sudo()
+        now = fields.Datetime.now()
+
+        expired_docs = PendingDoc.search(
+            [
+                ("status", "=", "pending"),
+                ("deadline", "!=", False),
+                ("deadline", "<=", now),
+            ]
+        )
+        if not expired_docs:
+            return
+
+        docs_by_assessment = {}
+        for doc in expired_docs:
+            docs_by_assessment.setdefault(doc.assessment_id.id, []).append(doc)
+
+        for assessment_id, docs in docs_by_assessment.items():
+            assessment = self.env["compliance.assessment"].browse(assessment_id)
+            if not assessment.exists():
+                continue
+
+            # Marcar documentos como vencidos
+            PendingDoc.browse([d.id for d in docs]).write({"status": "expired"})
+
+            # Ajustar estado de la evaluación si no está aprobada
+            if assessment.state != "approved":
+                assessment.state = "blocked"
+
+            # Notificar al cliente
+            email_to = assessment.partner_id.email if assessment.partner_id else False
+            if email_to:
+                titles = sorted({(d.title or "").strip() for d in docs if (d.title or "").strip()})
+                list_html = "".join("<li>%s</li>" % html.escape(t) for t in titles)
+                body = (
+                    "<p>Estimado/a,</p>"
+                    "<p>Le informamos que se venció el plazo para adjuntar los siguientes documentos KYC:</p>"
+                    "<ul>%s</ul>"
+                    "<p>Puede adjuntarlos en cuanto sea posible mediante la opción de documentos pendientes en la evaluación.</p>"
+                    % list_html
+                )
+                self.env["mail.mail"].sudo().create(
+                    {
+                        "model": "compliance.assessment",
+                        "res_id": assessment.id,
+                        "email_to": email_to,
+                        "subject": _("Recordatorio: Documentos KYC vencidos (%s)") % (assessment.name or ""),
+                        "body_html": body,
+                    }
+                ).send()
+
+            assessment.message_post(
+                body=_("Se vencieron documentos pendientes y la evaluación fue marcada como bloqueada (%s).")
+                % (", ".join(sorted({(d.title or "").strip() for d in docs if (d.title or "").strip()})[:5]))
+            )
+
 # --- Perfiles de riesgo: umbrales personalizables por el cliente/operador desde la UI ---
 class ComplianceRiskProfile(models.Model):
     _name = 'compliance.risk.profile'
@@ -1498,9 +1699,9 @@ class ComplianceRiskProfile(models.Model):
     # Máximo de transferencias para alerta de pitufeo
     transfer_count_limit = fields.Integer(string="Límite transferencias (alerta pitufeo)", default=3)
     # Score mínimo para considerar riesgo Medio (semáforo amarillo)
-    score_threshold_medium = fields.Integer(string="Score mínimo Riesgo Medio", default=36)
-    # Score mínimo para considerar riesgo Alto (semáforo rojo)
-    score_threshold_high = fields.Integer(string="Score mínimo Riesgo Alto", default=71)
+    # R-14: escala 0-5 (ej. 1.8 = amarillo, 3.5 = rojo)
+    score_threshold_medium = fields.Float(string="Score mínimo Riesgo Medio (0-5)", default=1.8)
+    score_threshold_high = fields.Float(string="Score mínimo Riesgo Alto (0-5)", default=3.5)
 
     # Pesos de las variables en el score (suma ideal 1.0, pero el usuario puede ajustarlos)
     weight_origin_funds = fields.Float(string="Peso Origen de Fondos", default=0.30)
@@ -1639,3 +1840,41 @@ class ComplianceQuestionMapping(models.Model):
                 if len(parts) == 2:
                     rec.destination_model = parts[0]
                     rec.destination_field = parts[1]
+
+    def action_clean_obsolete_mappings(self):
+        """Elimina mapeos cuyo título no coincide con ninguna pregunta activa en encuestas."""
+        SurveyQuestion = self.env['survey.question'].sudo()
+        all_titles = set()
+        for q in SurveyQuestion.search([('is_page', '=', False)]):
+            if getattr(q, 'active', True):
+                t = (q.title or '').strip().lower()
+                if t:
+                    all_titles.add(t)
+        all_mappings = self.search([])
+        to_remove = self.browse()
+        for rec in all_mappings:
+            key = (rec.survey_question_title or '').strip().lower()
+            if key and key not in all_titles:
+                to_remove |= rec
+        if to_remove:
+            to_remove.unlink()
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title': _('Mapeos obsoletos eliminados'),
+                    'message': _('Se eliminaron %s registro(s) cuyo título no existe en ninguna pregunta de encuesta.') % len(to_remove),
+                    'type': 'success',
+                    'sticky': False,
+                },
+            }
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Sin cambios'),
+                'message': _('Todos los mapeos coinciden con preguntas existentes en encuestas.'),
+                'type': 'info',
+                'sticky': False,
+            },
+        }

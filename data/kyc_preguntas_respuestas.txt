@@ -43,9 +43,6 @@ KYC PERSONA FÍSICA – PREGUNTAS Y RESPUESTAS (kyc_pf_persona_fisica.csv)
   Pregunta: ¿Residente o Ciudadano EE.UU.?
   Respuestas: Sí | No
 
-  Pregunta: Condición EE.UU.
-  Respuestas: Residente | Ciudadano
-
   Pregunta: No. Pasaporte Principal
   Respuestas: (texto libre)
 
@@ -54,15 +51,6 @@ KYC PERSONA FÍSICA – PREGUNTAS Y RESPUESTAS (kyc_pf_persona_fisica.csv)
 
   Pregunta: No. Pasaporte Adicional 2
   Respuestas: (texto libre)
-
-  Pregunta: Fecha de Expedición Pasaporte
-  Respuestas: (fecha)
-
-  Pregunta: Fecha de Vencimiento Pasaporte
-  Respuestas: (fecha)
-
-  Pregunta: País Emisión Pasaporte
-  Respuestas: (dropdown de países)
 
   Pregunta: No. Seguridad Social / TIN (EE.UU.)
   Respuestas: (texto libre)
@@ -108,21 +96,6 @@ KYC PERSONA FÍSICA – PREGUNTAS Y RESPUESTAS (kyc_pf_persona_fisica.csv)
 
 --- 1.1 Información FATCA ---
 
-  Pregunta: Formulario FATCA
-  Respuestas: W8 | W9
-
-  Pregunta: Fecha Formulario W8
-  Respuestas: (fecha)
-
-  Pregunta: Estado o Provincia EE.UU.
-  Respuestas: (texto libre)
-
-  Pregunta: Ciudad EE.UU.
-  Respuestas: (texto libre)
-
-  Pregunta: Código Postal EE.UU.
-  Respuestas: (texto libre)
-
 --- 1.2 Lugar de Trabajo / Ingresos ---
 
   Pregunta: Origen de los Ingresos
@@ -162,9 +135,6 @@ KYC PERSONA FÍSICA – PREGUNTAS Y RESPUESTAS (kyc_pf_persona_fisica.csv)
 
   Pregunta: Moneda (Ref. Bancaria 1)
   Respuestas: DOP | USD | EUR | Otra
-
-  Pregunta: Fecha de Apertura (Ref. Bancaria 1)
-  Respuestas: (fecha)
 
   Pregunta: Entidad Financiera (Ref. Bancaria 1)
   Respuestas: (texto libre)
@@ -307,54 +277,6 @@ KYC PERSONA FÍSICA – PREGUNTAS Y RESPUESTAS (kyc_pf_persona_fisica.csv)
 
   Pregunta: Unidad
   Respuestas: (texto libre)
-
-  Pregunta: Etapa
-  Respuestas: (texto libre)
-
-  Pregunta: Cuota 1 - Monto en letras
-  Respuestas: (texto libre)
-
-  Pregunta: Cuota 1 - Monto en números (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 2 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 2 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Cuota 3 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 3 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Cuota 4 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 4 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Cuota 5 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 5 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Cuota 6 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 6 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Cuota 7 - Monto (RD$)
-  Respuestas: (moneda)
-
-  Pregunta: Cuota 7 - Fecha de vencimiento
-  Respuestas: (fecha)
-
-  Pregunta: Pago Final - Monto (RD$)
-  Respuestas: (moneda)
 
 ================================================================================
 Fin del listado

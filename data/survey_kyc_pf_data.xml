@@ -1653,21 +1653,120 @@
       <field name="sequence">201</field>
       <field name="title">Adjunte copia de su documento de identidad vigente (cédula o pasaporte)</field>
       <field name="question_type">upload_file</field>
-      <field name="constr_mandatory" eval="True"/>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <!-- R-17: opción de carga posterior para el documento de identidad -->
+    <record id="survey_kyc_pf_p16_q1_later" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">202</field>
+      <field name="title">Adjuntaré más tarde: Documento de identidad</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q1_later_no" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q1_later"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q1_later_yes" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q1_later"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="1"/>
     </record>
     <record id="survey_kyc_pf_p16_q2" model="survey.question">
       <field name="survey_id" ref="survey_kyc_pf"/>
-      <field name="sequence">202</field>
+      <field name="sequence">203</field>
       <field name="title">Si es asalariado, adjunte carta de trabajo; si no lo es, documentos que justifiquen el origen de los fondos</field>
       <field name="question_type">upload_file</field>
       <field name="constr_mandatory" eval="False"/>
     </record>
+    <!-- R-17: opción de carga posterior para carta de trabajo / origen de fondos -->
+    <record id="survey_kyc_pf_p16_q2_later" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">204</field>
+      <field name="title">Adjuntaré más tarde: Carta de trabajo / origen de fondos</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q2_later_no" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q2_later"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q2_later_yes" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q2_later"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="1"/>
+    </record>
     <record id="survey_kyc_pf_p16_q3" model="survey.question">
       <field name="survey_id" ref="survey_kyc_pf"/>
-      <field name="sequence">203</field>
+      <field name="sequence">205</field>
       <field name="title">Adjunte estados de cuenta bancarios recientes (últimos 3 meses)</field>
       <field name="question_type">upload_file</field>
       <field name="constr_mandatory" eval="False"/>
     </record>
+    <!-- R-17: opción de carga posterior para estados de cuenta -->
+    <record id="survey_kyc_pf_p16_q3_later" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">206</field>
+      <field name="title">Adjuntaré más tarde: Estados de cuenta</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q3_later_no" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q3_later"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q3_later_yes" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p16_q3_later"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+
+    <!-- Limpieza: eliminar del template campos/preguntas marcados en rojo -->
+    <!-- 1. Datos Generales del Cliente -->
+    <delete id="survey_kyc_pf_p1_q14_sug1" model="survey.question.answer"/>
+    <delete id="survey_kyc_pf_p1_q14_sug2" model="survey.question.answer"/>
+    <delete id="survey_kyc_pf_p1_q14" model="survey.question"/>
+    <delete id="survey_kyc_pf_p1_q18" model="survey.question"/>
+    <delete id="survey_kyc_pf_p1_q19" model="survey.question"/>
+    <delete id="survey_kyc_pf_p1_q20" model="survey.question"/>
+
+    <!-- 1.1 Información FATCA -->
+    <delete id="survey_kyc_pf_p2_q1_sug1" model="survey.question.answer"/>
+    <delete id="survey_kyc_pf_p2_q1_sug2" model="survey.question.answer"/>
+    <delete id="survey_kyc_pf_p2_q1" model="survey.question"/>
+    <delete id="survey_kyc_pf_p2_q2" model="survey.question"/>
+    <delete id="survey_kyc_pf_p2_q3" model="survey.question"/>
+    <delete id="survey_kyc_pf_p2_q4" model="survey.question"/>
+    <delete id="survey_kyc_pf_p2_q5" model="survey.question"/>
+
+    <!-- 2.1 Referencias Bancarias -->
+    <delete id="survey_kyc_pf_p4_q4" model="survey.question"/>
+
+    <!-- 8. Información del Proyecto -->
+    <delete id="survey_kyc_pf_p15_q4" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q5" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q6" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q7" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q8" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q9" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q10" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q11" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q12" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q13" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q14" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q15" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q16" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q17" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q18" model="survey.question"/>
+    <delete id="survey_kyc_pf_p15_q19" model="survey.question"/>
   </data>
 </odoo>

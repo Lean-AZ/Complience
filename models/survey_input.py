@@ -1,6 +1,8 @@
 import csv
+from datetime import timedelta
 import json
 import os
+import unicodedata
 
 from odoo import models, fields, api, _
 
@@ -58,30 +60,38 @@ class SurveyUserInput(models.Model):
         res = super(SurveyUserInput, self)._mark_done()
         
         for response in self:
-            # Buscamos la evaluación abierta para este cliente exacto
-            assessment = self.env['compliance.assessment'].search([
-                ('partner_id', '=', response.partner_id.id),
-                ('state', 'in', ['draft', 'ia_process'])
-            ], limit=1)
-            
+            # Buscamos la evaluación abierta para este cliente (por partner o por email) y misma encuesta
+            domain = [('state', 'in', ['draft', 'ia_process'])]
+            if response.survey_id:
+                domain.append(('survey_id', '=', response.survey_id.id))
+            if response.partner_id:
+                assessment = self.env['compliance.assessment'].search(
+                    domain + [('partner_id', '=', response.partner_id.id)],
+                    order='create_date desc', limit=1
+                )
+            else:
+                assessment = self.env['compliance.assessment'].browse()
+            if not assessment and response.email:
+                assessment = self.env['compliance.assessment'].search(
+                    domain + [('partner_id.email', '=', (response.email or '').strip())],
+                    order='create_date desc', limit=1
+                )
             if assessment:
                 kyc_mapping = _load_kyc_pf_mapping()
                 kyc_raw = {}
 
                 vals = {}
-                # Agrupadores de puntuación por categoría estratégica
                 scores = {
-                    'funds': [], 'pep': [], 'activity': [], 
+                    'funds': [], 'pep': [], 'activity': [],
                     'geo': [], 'volume': []
                 }
-                # Valores numéricos para Volumen Mensual (USD) y Cantidad de Transferencias
                 volume_values = []
                 transfer_values = []
 
                 for line in response.user_input_line_ids:
-                    # Normalización total del título para evitar fallos de "match"
                     title = (line.question_id.title or '').strip().lower()
-                    points = line.answer_score
+                    # Si una línea no tiene answer_score, no debe impactar factores del score.
+                    points = line.answer_score if line.answer_score is not None else None
 
                     # 0. Campos numéricos directos: Volumen Mensual (USD) y Cantidad de Transferencias
                     #    En Odoo Survey las respuestas "Valor numérico" se guardan en value_numerical_box.
@@ -107,22 +117,40 @@ class SurveyUserInput(models.Model):
                             transfer_values.append(int(raw_num))
                         continue
 
-                    # 1. Origen de Fondos (Directriz 2 y 5)
-                    if any(k in title for k in ['origen', 'fondos', 'recursos', 'ingresos', 'donaciones']):
-                        scores['funds'].append(points)
-                    
-                    # 2. PEP y Beneficiario Final (Directriz 5)
+                    # 1. Geografía y Nacionalidad (prioridad: evita que "País de origen..." se vaya a fondos)
+                    # Nota: también incluimos patrones EE.UU./US Person para que preguntas con scoring
+                    # (cuentas, transferencias, etc.) alimenten nationality_score.
+                    if any(
+                        k in title
+                        for k in [
+                            'país',
+                            'nacionalidad',
+                            'jurisdicción',
+                            'internacionales',
+                            'ee.uu',
+                            'us person',
+                            'residente',
+                            'ciudadano',
+                        ]
+                    ):
+                        if points is not None:
+                            scores['geo'].append(points)
+
+                    # 2. Origen de Fondos (solo "fondos/recursos/ingresos/donaciones"; no solo "origen")
+                    elif any(k in title for k in ['fondos', 'recursos', 'ingresos', 'donaciones']):
+                        if points is not None:
+                            scores['funds'].append(points)
+
+                    # 3. PEP y Beneficiario Final (Directriz 5)
                     elif any(k in title for k in ['pep', 'accionista', 'ejecutivo', 'beneficiario', 'compleja']):
-                        scores['pep'].append(points)
-                    
-                    # 3. Actividad Económica / Joseo (Directriz 2)
+                        if points is not None:
+                            scores['pep'].append(points)
+
+                    # 4. Actividad Económica / Joseo (Directriz 2)
                     elif any(k in title for k in ['actividad', 'negocio', 'industria', 'estado', 'fiduciaria', 'vínculos']):
-                        scores['activity'].append(points)
-                    
-                    # 4. Geografía y Nacionalidad
-                    elif any(k in title for k in ['país', 'nacionalidad', 'jurisdicción', 'internacionales']):
-                        scores['geo'].append(points)
-                    
+                        if points is not None:
+                            scores['activity'].append(points)
+
                     # 5. Volumen Transaccional / El Bulto (Directriz 2)
                     # Incluimos también patrones de "monto mensual" / "rango monto mensual"
                     # para capturar preguntas como "Rango monto mensual esperado (DOP)".
@@ -131,11 +159,12 @@ class SurveyUserInput(models.Model):
                         'transaccional',
                         'bulto',
                         '250,000',
-                        'cuentas',
                         'monto mensual',
                         'rango monto mensual',
+                        'transacciones',
                     ]):
-                        scores['volume'].append(points)
+                        if points is not None:
+                            scores['volume'].append(points)
 
                 # Aplicamos el valor máximo (Criterio Conservador de Riesgo)
                 if scores['funds']:
@@ -284,6 +313,30 @@ class SurveyUserInput(models.Model):
                     }
                     assessment.kyc_expected_monthly_range = range_map.get(monthly_range) or False
 
+                    # Capacidad mensual (R-16/operativo):
+                    # `purchase_capacity_monthly` en la evaluación se calcula con:
+                    #   res.partner.monthly_salary + res.partner.other_income
+                    # y hoy casi nunca se alimenta desde la encuesta.
+                    monthly_capacity_map = {
+                        'rango_1_10000': 5000.0,
+                        'rango_10001_100000': 55000.0,
+                        'rango_100001_250000': 175000.0,
+                        'rango_250001_500000': 375000.0,
+                        'rango_500001_1000000': 750000.0,
+                        'rango_1000001_mas': 1250000.0,
+                    }
+                    if response.partner_id and assessment.kyc_expected_monthly_range:
+                        derived_monthly = monthly_capacity_map.get(assessment.kyc_expected_monthly_range)
+                        if derived_monthly is not None:
+                            # No sobreescribimos otros ingresos si el partner ya los tiene.
+                            partner_vals_capacity = {}
+                            if not response.partner_id.monthly_salary:
+                                partner_vals_capacity['monthly_salary'] = derived_monthly
+                            if not response.partner_id.other_income:
+                                partner_vals_capacity['other_income'] = 0.0
+                            if partner_vals_capacity:
+                                response.partner_id.write(partner_vals_capacity)
+
                     # Tipo de adquisición (Selection)
                     product_type = (kyc_raw.get('x_kyc_tipo_adquisicion') or '').strip().lower()
                     product_map = {
@@ -332,20 +385,50 @@ class SurveyUserInput(models.Model):
                         # No romper el cierre si por alguna razón el dump falla.
                         assessment.kyc_raw_json = False
 
-                # Copiar adjuntos subidos en la encuesta a la evaluación (survey_upload_file usa value_file_data_ids).
+                # Copiar adjuntos subidos en la encuesta a la evaluación.
                 try:
                     Attachment = self.env["ir.attachment"].sudo()
                     created_names = set()
-                    # 1) Módulo survey_upload_file: adjuntos en user_input_line.value_file_data_ids
+                    # 1) value_file_data_ids (survey_upload_file)
                     for line in response.user_input_line_ids:
                         q = line.question_id
                         if not q or getattr(q, "question_type", "") != "upload_file":
                             continue
                         file_ids = getattr(line, "value_file_data_ids", None)
-                        if not file_ids:
+                        if file_ids:
+                            for src in file_ids:
+                                if not getattr(src, "datas", None):
+                                    continue
+                                name = src.name or (q.title or "Documento KYC").strip()
+                                if name in created_names:
+                                    name = "%s (%s)" % (name, src.id)
+                                existing = Attachment.search([
+                                    ("res_model", "=", "compliance.assessment"),
+                                    ("res_id", "=", assessment.id),
+                                    ("name", "=", name),
+                                ], limit=1)
+                                if existing:
+                                    continue
+                                Attachment.create({
+                                    "name": name,
+                                    "type": "binary",
+                                    "datas": src.datas,
+                                    "mimetype": getattr(src, "mimetype", None) or "application/octet-stream",
+                                    "res_model": "compliance.assessment",
+                                    "res_id": assessment.id,
+                                })
+                                created_names.add(name)
+                    # 1b) Adjuntos vinculados a la línea (res_model survey.user_input.line)
+                    for line in response.user_input_line_ids:
+                        q = line.question_id
+                        if not q or getattr(q, "question_type", "") != "upload_file":
                             continue
-                        for src in file_ids:
-                            if not src.datas:
+                        line_attachments = Attachment.search([
+                            ("res_model", "=", "survey.user_input.line"),
+                            ("res_id", "=", line.id),
+                        ])
+                        for src in line_attachments:
+                            if not getattr(src, "datas", None):
                                 continue
                             name = src.name or (q.title or "Documento KYC").strip()
                             if name in created_names:
@@ -361,7 +444,7 @@ class SurveyUserInput(models.Model):
                                 "name": name,
                                 "type": "binary",
                                 "datas": src.datas,
-                                "mimetype": src.mimetype or "application/octet-stream",
+                                "mimetype": getattr(src, "mimetype", None) or "application/octet-stream",
                                 "res_model": "compliance.assessment",
                                 "res_id": assessment.id,
                             })
@@ -429,6 +512,125 @@ class SurveyUserInput(models.Model):
                         assessment.message_post(
                             body=_("Documentos adjuntos de la encuesta copiados a esta evaluación (%s archivo(s)): %s.")
                             % (len(created_names), ", ".join(sorted(created_names)[:5]) + ("…" if len(created_names) > 5 else "")),
+                        )
+                except Exception:
+                    pass
+
+                # R-18: registrar documentos pendientes / faltantes (R-17: "Adjuntaré más tarde")
+                try:
+                    PendingDoc = self.env["compliance.kyc.pending.document"].sudo()
+
+                    expiry_hours_raw = (
+                        self.env["ir.config_parameter"].sudo().get_param(
+                            "ghr_compliance.pending_docs_expiry_hours", "48"
+                        )
+                        or "48"
+                    )
+                    try:
+                        expiry_hours = float(expiry_hours_raw)
+                    except ValueError:
+                        expiry_hours = 48.0
+
+                    def _norm(txt):
+                        s = (txt or "").strip()
+                        if not s:
+                            return ""
+                        s = unicodedata.normalize("NFKD", str(s)).casefold()
+                        return "".join(ch for ch in s if not unicodedata.combining(ch))
+
+                    pending_created = 0
+                    # Orden estable para correlacionar "upload_file" con la opción "Adjuntaré más tarde" cercana
+                    ordered_lines = sorted(
+                        response.user_input_line_ids,
+                        key=lambda l: (
+                            l.question_id.sequence if l.question_id else 0,
+                            l.question_id.id if l.question_id else 0,
+                            l.id,
+                        ),
+                    )
+
+                    for idx, line in enumerate(ordered_lines):
+                        q = line.question_id
+                        if not q or getattr(q, "is_page", False):
+                            continue
+                        if getattr(q, "question_type", "") != "upload_file":
+                            continue
+
+                        # Determinamos si realmente se subió algo en esta línea
+                        has_file = False
+                        file_data_ids = getattr(line, "value_file_data_ids", None)
+                        if file_data_ids:
+                            for src in file_data_ids:
+                                if getattr(src, "datas", None):
+                                    has_file = True
+                                    break
+                        if not has_file:
+                            bin_val = getattr(line, "value_binary", None)
+                            if bin_val:
+                                has_file = True
+
+                        if has_file:
+                            continue
+
+                        # Buscamos en las líneas cercanas la opción "Adjuntaré más tarde" para este documento
+                        later_selected = False
+                        for j in range(idx + 1, len(ordered_lines)):
+                            nl = ordered_lines[j]
+                            nq = nl.question_id
+                            if not nq or getattr(nq, "is_page", False):
+                                continue
+                            if getattr(nq, "question_type", "") == "upload_file":
+                                break
+                            if "adjuntare mas tarde" in _norm(getattr(nq, "title", "")):
+                                chosen = (
+                                    getattr(getattr(nl, "suggested_answer_id", None), "value", None)
+                                    or getattr(nl, "value_char_box", None)
+                                    or getattr(nl, "value_text_box", None)
+                                    or ""
+                                )
+                                later_selected = _norm(chosen) in ("si", "true", "1", "yes")
+                                break
+
+                        status = "pending" if later_selected else "missing"
+
+                        # Preservamos "requerido" por criterio del módulo:
+                        # El 1er upload (documento ID) fue el único mandatory original (sequence=201).
+                        required = bool(getattr(q, "sequence", 0) == 201)
+
+                        deadline = (
+                            fields.Datetime.now() + timedelta(hours=expiry_hours)
+                            if expiry_hours and expiry_hours > 0
+                            else False
+                        )
+
+                        existing = PendingDoc.search(
+                            [
+                                ("assessment_id", "=", assessment.id),
+                                ("survey_question_id", "=", q.id),
+                            ],
+                            limit=1,
+                        )
+                        vals_pending = {
+                            "required": required,
+                            "status": status,
+                            "deadline": deadline,
+                        }
+                        if existing:
+                            existing.write(vals_pending)
+                        else:
+                            PendingDoc.create(
+                                dict(
+                                    assessment_id=assessment.id,
+                                    survey_question_id=q.id,
+                                    **vals_pending,
+                                )
+                            )
+                            pending_created += 1
+
+                    if pending_created:
+                        assessment.message_post(
+                            body=_("Se registraron documentos pendientes/faltantes (%s) desde la encuesta.")
+                            % pending_created
                         )
                 except Exception:
                     pass

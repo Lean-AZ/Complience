@@ -8,3 +8,6 @@ access_compliance_question_mapping,compliance.question.mapping,model_compliance_
 access_compliance_document_analysis,compliance.document.analysis,model_compliance_document_analysis,base.group_user,1,1,1,1
 access_compliance_kyc_correction_wizard,compliance.kyc.correction.wizard,model_compliance_kyc_correction_wizard,base.group_user,1,1,1,1
 access_compliance_kyc_correction_wizard_line,compliance.kyc.correction.wizard.line,model_compliance_kyc_correction_wizard_line,base.group_user,1,1,1,1
+access_compliance_pending_documents_wizard,compliance.pending.documents.wizard,model_compliance_pending_documents_wizard,base.group_user,1,1,1,1
+access_compliance_pending_documents_wizard_line,compliance.pending.documents.wizard.line,model_compliance_pending_documents_wizard_line,base.group_user,1,1,1,1
+access_compliance_kyc_pending_document,compliance.kyc.pending.document,model_compliance_kyc_pending_document,base.group_user,1,1,1,0

@@ -45,11 +45,15 @@
         <field name="res_model">compliance.question</field>
         <field name="view_mode">tree,form</field>
         <field name="help" type="html">
-            <p>Lista de preguntas que puede usar como referencia al armar la encuesta. Cada pregunta puede asociarse a un tipo de formulario (Inmobiliario/Automotriz, persona física o jurídica). Para indicar <strong>dónde</strong> se guarda la respuesta cuando el cliente responda, use el menú <strong>Dónde se guarda cada respuesta</strong>.</p>
+            <p>Lista de referencia de preguntas (normalmente cargada por datos del módulo). El menú de Configuración está oculto; el flujo operativo usa la encuesta y la matriz.</p>
         </field>
     </record>
 
+    <!-- No mostrar en Compliance > Configuración (preguntas/mapeo vienen por datos y encuesta) -->
     <menuitem id="menu_compliance_question" name="Preguntas de cumplimiento" parent="menu_compliance_config" action="action_compliance_question" sequence="5"/>
+    <record id="menu_compliance_question" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 
     <!-- Dónde se guarda cada respuesta (sin jerga modelo/campo) -->
     <record id="view_compliance_question_mapping_tree" model="ir.ui.view">
@@ -57,6 +61,9 @@
         <field name="model">compliance.question.mapping</field>
         <field name="arch" type="xml">
             <tree>
+                <header>
+                    <button name="action_clean_obsolete_mappings" string="Eliminar mapeos obsoletos" type="object" class="btn-secondary"/>
+                </header>
                 <field name="survey_question_title"/>
                 <field name="form_type"/>
                 <field name="destination_key"/>
@@ -87,9 +94,12 @@
         <field name="res_model">compliance.question.mapping</field>
         <field name="view_mode">tree,form</field>
         <field name="help" type="html">
-            <p>Indique qué palabra debe tener el título de la pregunta en la encuesta y <strong>dónde</strong> guardar la respuesta (en la evaluación o en el contacto). Así el sistema rellena automáticamente los datos cuando el cliente complete la encuesta.</p>
+            <p>Mapeo título de pregunta → destino en evaluación/contacto. Menú desactivado; abrir la acción desde Ajustes técnicos si hace falta.</p>
         </field>
     </record>
     <menuitem id="menu_compliance_question_mapping" name="Dónde se guarda cada respuesta" parent="menu_compliance_config" action="action_compliance_question_mapping" sequence="6"/>
+    <record id="menu_compliance_question_mapping" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
 
 </odoo>

@@ -17,6 +17,7 @@
         'views/survey_user_input_views_inherit.xml',
         'views/compliance_api_config_views.xml',
         'views/compliance_question_views.xml',
+        'views/compliance_pending_documents_wizard_views.xml',
         'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
