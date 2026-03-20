@@ -13,6 +13,7 @@
         'report/report_compliance_validity.xml',
         'report/report_compliance_kyc_pf.xml',
         'views/compliance_views.xml',
+        'views/survey_templates.xml',
         'views/compliance_kyc_correction_wizard_views.xml',
         'views/survey_user_input_views_inherit.xml',
         'views/compliance_api_config_views.xml',

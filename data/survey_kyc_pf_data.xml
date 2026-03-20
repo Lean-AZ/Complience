@@ -5,9 +5,27 @@
       <field name="title">KYC Persona Física - Debida Diligencia</field>
       <field name="survey_type">assessment</field>
       <field name="access_mode">public</field>
+      <field name="scoring_type">scoring_without_answers</field>
+      <field name="certification" eval="False"/>
       <field name="users_can_go_back" eval="True"/>
       <field name="questions_layout">page_per_section</field>
-      <field name="description" type="html"><p>Formulario de debida diligencia para adquirentes e inversionistas. Las respuestas alimentan la matriz de riesgo.</p></field>
+      <field name="description" type="html">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;">
+          <p style="margin:0 0 8px 0;"><strong>Formulario de Debida Diligencia KYC (Persona Fisica)</strong></p>
+          <p style="margin:0 0 8px 0;">
+            Complete la informacion de forma clara y precisa. Este formulario es de uso confidencial y forma parte del proceso de validacion de cumplimiento.
+          </p>
+          <p style="margin:0;">
+            Puede avanzar por secciones y revisar sus respuestas antes de finalizar.
+          </p>
+        </div>
+      </field>
+      <field name="description_done" type="html">
+        <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;">
+          <p style="margin:0 0 8px 0;"><strong>Gracias por completar la encuesta.</strong></p>
+          <p style="margin:0;">Hemos recibido su informacion correctamente. Nuestro equipo de cumplimiento la revisara y le contactara en caso de ser necesario.</p>
+        </div>
+      </field>
     </record>
 
     <!-- 1. Datos Generales del Cliente -->

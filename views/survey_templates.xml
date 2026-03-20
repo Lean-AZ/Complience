@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Al finalizar la encuesta no mostrar "aprobado/reprobado" ni score al usuario -->
+    <template id="survey_fill_form_done_hide_pass_fail" inherit_id="survey.survey_fill_form_done">
+        <xpath expr="//div[@class='row']/div[@class='col']/t[@t-if=&quot;survey.scoring_type != 'no_scoring' and survey.scoring_success_min&quot;]" position="replace">
+            <t/>
+        </xpath>
+    </template>
+</odoo>
