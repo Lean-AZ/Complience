@@ -413,11 +413,12 @@ class ComplianceAssessment(models.Model):
                                 if page_text:
                                     page_text = DocAnalysis._shorten_text_to_sentences(page_text)
                                 if page_err:
-                                    parts.append(_("--- Página %s ---") % idx + "\n[Error: %s]" % page_err)
+                                    parts.append("[Error: %s]" % page_err)
                                 elif page_text:
-                                    parts.append(_("--- Página %s ---") % idx + "\n" + page_text)
+                                    parts.append(page_text)
                                 time.sleep(1)
-                            text = "\n\n".join(parts) if parts else None
+                            # Mostrar OCR consolidado en párrafos continuos (sin separación por página).
+                            text = "\n\n".join(p.strip() for p in parts if (p or "").strip()) if parts else None
                             err = None
             else:
                 if use_gpt:

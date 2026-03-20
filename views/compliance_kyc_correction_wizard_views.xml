@@ -38,6 +38,7 @@
                                 <field name="value_date" invisible="answer_type != 'date'"/>
                                 <field name="value_datetime" invisible="answer_type != 'datetime'"/>
                                 <field name="suggested_answer_id" invisible="answer_type != 'suggestion'"
+                                    domain="[('question_id', '=', question_id)]"
                                     options="{'no_create': True}"/>
                             </group>
                         </form>

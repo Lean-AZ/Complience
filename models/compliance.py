@@ -106,6 +106,7 @@ class ComplianceAssessment(models.Model):
 
     # Resultado Final Computado (R-14: escala 0-5, techo máximo 5.0)
     risk_score = fields.Float(string="Score Total (0-5)", compute="_compute_total_risk", store=True)
+    risk_score_max = fields.Float(string="Máximo score", default=5.0)
     risk_level = fields.Selection([
         ('low', 'Bajo (Verde)'),
         ('medium', 'Medio (Amarillo)'),
@@ -261,22 +262,73 @@ class ComplianceAssessment(models.Model):
         for rec in self:
             qa_html = ""
             try:
-                data = rec._get_kyc_qa_report_data()
-                qa_list = data.get('qa_list') or []
-                if qa_list:
-                    # Agrupamos preguntas por sección de la encuesta
-                    sections = {}
-                    no_answer_token = (_("No respondidada") or "").strip().lower()
+                sections = {}
+                no_answer_label = _("No respondida")
+
+                # Preferimos la estructura real de la encuesta para mostrar TODAS las secciones/preguntas.
+                if rec.survey_id:
+                    SurveyQuestion = self.env["survey.question"].sudo()
+                    all_questions = SurveyQuestion.search(
+                        [("survey_id", "=", rec.survey_id.id)],
+                        order="sequence,id",
+                    )
+
+                    line_by_qid = {}
+                    if rec.user_input_id:
+                        for line in rec.user_input_id.user_input_line_ids:
+                            if line.question_id:
+                                line_by_qid[line.question_id.id] = line
+
+                    current_section = _("Otras preguntas")
+                    for q in all_questions:
+                        if getattr(q, "is_page", False):
+                            current_section = (q.title or "").strip() or _("Otras preguntas")
+                            sections.setdefault(current_section, [])
+                            continue
+
+                        question_title = (q.title or "").strip()
+                        if not question_title:
+                            continue
+
+                        line = line_by_qid.get(q.id)
+                        answer = ""
+                        if line:
+                            raw = getattr(line, "suggested_answer_id", None) and line.suggested_answer_id.value
+                            if raw:
+                                answer = rec._format_kyc_answer(raw)
+                            else:
+                                raw = (
+                                    getattr(line, "value_char_box", None)
+                                    or getattr(line, "value_text_box", None)
+                                )
+                                if raw is not None and str(raw).strip():
+                                    answer = rec._format_kyc_answer(raw)
+                                elif getattr(line, "value_numerical_box", None) is not None:
+                                    answer = str(line.value_numerical_box)
+                                elif getattr(line, "value_date", None):
+                                    answer = str(line.value_date)
+                                elif getattr(line, "value_datetime", None):
+                                    answer = str(line.value_datetime)
+                                else:
+                                    answer = ""
+
+                        sections.setdefault(current_section, []).append(
+                            (question_title, (answer or "").strip() or no_answer_label)
+                        )
+                else:
+                    # Fallback cuando no hay encuesta asociada.
+                    data = rec._get_kyc_qa_report_data()
+                    qa_list = data.get("qa_list") or []
                     for item in qa_list:
-                        q = (item.get('question') or '').strip()
-                        a = (item.get('answer') or '').strip()
-                        # El preview debe mostrar solo respuestas realmente provistas
-                        if not a or a.lower() == no_answer_token:
+                        q = (item.get("question") or "").strip()
+                        a = (item.get("answer") or "").strip()
+                        if not q:
                             continue
                         key = q.lower()
                         section = section_map.get(key) or _("Otras preguntas")
-                        sections.setdefault(section, []).append((q, a))
+                        sections.setdefault(section, []).append((q, a or no_answer_label))
 
+                if sections:
                     blocks = []
                     for section_name, items in sections.items():
                         header = section_name or _("Otras preguntas")
@@ -300,7 +352,7 @@ class ComplianceAssessment(models.Model):
                                 "<td style='vertical-align:top;padding:8px 14px;border-bottom:1px solid #e5e7eb;"
                                 "background:#ffffff;color:#111827;width:65%%;'>%s</td>"
                                 "</tr>"
-                                % (html.escape(q), html.escape(a) or "<span style='color:#9ca3af;'>%s</span>" % _("No respondida"))
+                                % (html.escape(q), html.escape(a) or "<span style='color:#9ca3af;'>%s</span>" % no_answer_label)
                             )
                         table_html = (
                             "<table style='width:100%%;border-collapse:collapse;font-size:13px;"
@@ -857,7 +909,20 @@ class ComplianceAssessment(models.Model):
                 if params_partner:
                     parameter_penalty += max(params_partner.mapped('base_score')) * 10
 
-            total_100 = base_score + rec.ai_penalty + parameter_penalty
+            # Penalización operativa por desproporción entre capacidad declarada y volumen mensual:
+            # +0.5 puntos (escala 0-5) si volumen > 2x capacidad, +1.0 si volumen > 3x.
+            # Se acumula en escala 0-100 para mantener consistencia del cálculo.
+            capacity_penalty_100 = 0.0
+            capacity = rec.purchase_capacity_monthly or 0.0
+            volume = rec.transaccional_volume or 0.0
+            if capacity > 0 and volume > 0:
+                ratio = volume / capacity
+                if ratio > 3.0:
+                    capacity_penalty_100 = 20.0  # +1.0 sobre escala 0-5
+                elif ratio > 2.0:
+                    capacity_penalty_100 = 10.0  # +0.5 sobre escala 0-5
+
+            total_100 = base_score + rec.ai_penalty + parameter_penalty + capacity_penalty_100
             # R-14: escala 0-5 y techo 5.0 (100 → 5.0)
             rec.risk_score = min(RISK_CEILING, total_100 / 20.0)
 
@@ -1626,6 +1691,87 @@ class ComplianceAssessment(models.Model):
                 "subject": _("Recordatorio: Encuesta de cumplimiento pendiente"),
                 "body_html": body,
             }).send()
+
+    @api.model
+    def _configure_pep_trigger_questions_data(self):
+        """Configura condicionales PEP en la encuesta KYC PF (ejecutable desde XML data).
+
+        Se ejecuta en upgrade para asegurar que los desencadenantes queden aplicados:
+        - ¿Es o ha sido PEP...? == Sí  -> preguntas de detalle PEP.
+        - ¿Tiene vínculo con PEP...? == Sí -> preguntas de detalle PEP vinculada.
+        """
+        Survey = self.env["survey.survey"].sudo()
+        Question = self.env["survey.question"].sudo()
+        Answer = self.env["survey.question.answer"].sudo()
+
+        survey = Survey.search(
+            [("title", "=", "KYC Persona Física - Debida Diligencia")], limit=1
+        )
+        if not survey:
+            return True
+
+        def _q(title):
+            return Question.search(
+                [
+                    ("survey_id", "=", survey.id),
+                    ("is_page", "=", False),
+                    ("title", "=", title),
+                ],
+                limit=1,
+            )
+
+        def _yes(question):
+            if not question:
+                return Answer.browse()
+            return Answer.search(
+                [
+                    ("question_id", "=", question.id),
+                    ("value", "in", ["Sí", "Si", "sí", "si", "Yes", "yes"]),
+                ],
+                limit=1,
+            )
+
+        pep_main_q = _q("¿Es o ha sido PEP o figura pública?")
+        pep_link_q = _q("¿Tiene vínculo con PEP o figura pública?")
+        pep_main_yes = _yes(pep_main_q)
+        pep_link_yes = _yes(pep_link_q)
+        if not pep_main_yes or not pep_link_yes:
+            return True
+
+        pep_dependents = [
+            "Cargo, Rango o Posición PEP",
+            "Fecha desde que ocupa el cargo PEP",
+            "Institución PEP",
+            "País PEP",
+        ]
+        pep_link_dependents = [
+            "Nombre de la PEP vinculada",
+            "Tipo de Vinculación con PEP",
+            "Cargo de la PEP vinculada",
+            "Fecha desde que ocupa cargo (PEP vinculada)",
+            "Institución de la PEP vinculada",
+            "País de la PEP vinculada",
+        ]
+
+        trigger_field = None
+        if "triggering_answer_ids" in Question._fields:
+            trigger_field = "triggering_answer_ids"
+        elif "suggested_answer_ids" in Question._fields:
+            trigger_field = "suggested_answer_ids"
+        if not trigger_field:
+            return True
+
+        for title in pep_dependents:
+            q = _q(title)
+            if q:
+                q.write({trigger_field: [(6, 0, [pep_main_yes.id])]})
+
+        for title in pep_link_dependents:
+            q = _q(title)
+            if q:
+                q.write({trigger_field: [(6, 0, [pep_link_yes.id])]})
+
+        return True
 
     @api.model
     def _cron_remind_pending_documents_expiry(self):

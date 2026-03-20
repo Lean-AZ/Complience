@@ -81,6 +81,8 @@ Sección,Nombre del Campo,Nombre Técnico del Campo,Tipo de Campo,Optionset Valu
 4.3 Volumen Mensual,Tipo principal de transacciones,x_kyc_tipo_transaccion,Selection,Efectivo | Cheque | Transferencia,
 4.3 Volumen Mensual,¿Realiza transferencias internacionales?,x_kyc_transferencias_int,Boolean,,
 4.3 Volumen Mensual,País de origen de transferencias internacionales,x_kyc_pais_transferencia,Many2one (res.country),,
+4.3 Volumen Mensual,Volumen mensual (USD),x_kyc_volumen_mensual_usd,Monetary,,
+4.3 Volumen Mensual,Cantidad de transferencias iniciales,x_kyc_transferencias_iniciales,Integer,,
 5. Inicial,,,,,
 5. Inicial,Monto de pago inicial (en letras),x_kyc_inicial_letras,Char,,
 5. Inicial,Monto de pago inicial (en números RD$),x_kyc_inicial_monto,Monetary,,

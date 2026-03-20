@@ -1441,6 +1441,20 @@
       <field name="question_type">char_box</field>
       <field name="constr_mandatory" eval="False"/>
     </record>
+    <record id="survey_kyc_pf_p11_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">97</field>
+      <field name="title">Volumen mensual (USD)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">98</field>
+      <field name="title">Cantidad de transferencias iniciales</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
 
     <!-- 5. Inicial -->
     <record id="survey_kyc_pf_p12" model="survey.question">
@@ -1747,9 +1761,13 @@
     <delete id="survey_kyc_pf_p2_q3" model="survey.question"/>
     <delete id="survey_kyc_pf_p2_q4" model="survey.question"/>
     <delete id="survey_kyc_pf_p2_q5" model="survey.question"/>
+    <delete id="survey_kyc_pf_p2" model="survey.question"/>
 
     <!-- 2.1 Referencias Bancarias -->
     <delete id="survey_kyc_pf_p4_q4" model="survey.question"/>
+
+    <!-- 5. Inicial -->
+    <delete id="survey_kyc_pf_p12_q1" model="survey.question"/>
 
     <!-- 8. Información del Proyecto -->
     <delete id="survey_kyc_pf_p15_q4" model="survey.question"/>
@@ -1768,5 +1786,8 @@
     <delete id="survey_kyc_pf_p15_q17" model="survey.question"/>
     <delete id="survey_kyc_pf_p15_q18" model="survey.question"/>
     <delete id="survey_kyc_pf_p15_q19" model="survey.question"/>
+
+    <!-- Asegurar desencadenantes PEP en cada upgrade (R-15 UI condicional) -->
+    <function model="compliance.assessment" name="_configure_pep_trigger_questions_data"/>
   </data>
 </odoo>

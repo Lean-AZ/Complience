@@ -5,20 +5,20 @@
         <field name="name">compliance.assessment.form</field>
         <field name="model">compliance.assessment</field>
         <field name="arch" type="xml">
-            <form string="Evaluación PLAFT">
+            <form string="Evaluación PLAFT" class="o_compliance_assessment_form">
                 <field name="user_input_id" invisible="1"/>
                 <field name="pending_documents_count" invisible="1"/>
+                <field name="risk_score_max" invisible="1"/>
                 <header>
-                    <button name="action_extract_ocr" string="Extraer texto (OCR)" type="object" class="btn-secondary" invisible="not partner_id"/>
-                    <button name="action_send_survey_invitation" string="Enviar invitación a encuesta" type="object" class="btn-secondary" invisible="not survey_id or not partner_id"/>
-                    <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn-secondary" invisible="not partner_id"/>
-                    <button name="action_report_compliance_kyc_pf" string="Imprimir preguntas y respuestas" type="object" class="btn-secondary" invisible="not partner_id"/>
-                    <button name="action_report_compliance_scoring" string="Imprimir análisis de riesgo" type="object" class="btn-secondary" invisible="not partner_id"/>
-                    <!-- En lugar del wizard, abrimos la participación estándar de Odoo para editar las respuestas -->
-                    <button name="action_edit_kyc_answers" string="Corregir respuestas KYC" type="object" class="btn-secondary" invisible="not user_input_id"/>
-                    <button name="action_open_pending_documents_wizard" string="Adjuntar documentos pendientes" type="object" class="btn-secondary" invisible="pending_documents_count == 0"/>
-                    <button name="action_approve" string="Aprobar Cliente" type="object" class="oe_highlight" invisible="state == 'approved'"/>
-                    <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved"/>
+                    <button name="action_extract_ocr" string="Extraer texto (OCR)" type="object" class="btn btn-outline-secondary" invisible="not partner_id"/>
+                    <button name="action_send_survey_invitation" string="Enviar invitación a encuesta" type="object" class="btn btn-outline-primary" invisible="not survey_id or not partner_id"/>
+                    <button name="action_generate_ai_report" string="Generar dictamen IA" type="object" class="btn btn-outline-info" invisible="not partner_id"/>
+                    <button name="action_report_compliance_kyc_pf" string="Imprimir preguntas y respuestas" type="object" class="btn btn-outline-dark" invisible="not partner_id"/>
+                    <button name="action_report_compliance_scoring" string="Imprimir análisis de riesgo" type="object" class="btn btn-outline-dark" invisible="not partner_id"/>
+                    <button name="action_edit_kyc_answers" string="Corregir respuestas KYC" type="object" class="btn btn-primary" invisible="not user_input_id"/>
+                    <button name="action_open_pending_documents_wizard" string="Adjuntar documentos pendientes" type="object" class="btn btn-warning" invisible="pending_documents_count == 0"/>
+                    <button name="action_approve" string="Aprobar Cliente" type="object" class="btn btn-success" invisible="state == 'approved'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,ia_process,review,approved,blocked" statusbar_colors='{"blocked":"danger","approved":"success","review":"warning","ia_process":"info","draft":"muted"}'/>
                 </header>
                 <sheet>
                     <div class="oe_title">
@@ -44,7 +44,7 @@
                             <field name="transaction_bulto_score" string="Riesgo volumen transaccional (1-10)" readonly="1"/>
                         </group>
                         <group string="Semáforo de riesgo y costo IA">
-                            <field name="risk_score" string="Score total de riesgo (0-5)" widget="gauge" options="{'max': 5}" readonly="1"/>
+                            <field name="risk_score" string="Score total de riesgo (0-5)" widget="gauge" options="{'max_field': 'risk_score_max'}" readonly="1"/>
                             <field name="risk_level" widget="badge" decoration-danger="risk_level == 'high'" decoration-warning="risk_level == 'medium'" decoration-success="risk_level == 'low'" readonly="1"/>
                             <field name="ai_penalty" string="Ajuste IA (castigo)" readonly="1"/>
                             <field name="purchase_capacity_monthly" string="Capacidad mensual declarada" readonly="1"/>

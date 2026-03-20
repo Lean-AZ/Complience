@@ -21,3 +21,31 @@
 .o_full_page_wizard .o_list_table td {
     vertical-align: middle;
 }
+
+/* Estilo profesional de cabecera en evaluación compliance */
+.o_compliance_assessment_form .o_statusbar_status [data-value="blocked"] {
+    background-color: #dc3545 !important;
+    color: #fff !important;
+    border-color: #dc3545 !important;
+}
+.o_compliance_assessment_form .o_statusbar_status [data-value="approved"] {
+    background-color: #198754 !important;
+    color: #fff !important;
+    border-color: #198754 !important;
+}
+
+/* Refuerzo para modo dropdown del statusbar (algunas vistas compactas). */
+.o_compliance_assessment_form .o_field_statusbar .dropdown-menu .dropdown-item[data-value="blocked"],
+.o_compliance_assessment_form .o_field_statusbar .dropdown-menu .dropdown-item.o_status[data-value="blocked"] {
+    color: #dc3545 !important;
+    font-weight: 700 !important;
+}
+
+/* Botón actual cuando el estado activo es blocked (según render del statusbar). */
+.o_compliance_assessment_form .o_field_statusbar [data-value="blocked"].o_arrow_button_current,
+.o_compliance_assessment_form .o_field_statusbar [data-value="blocked"].btn-primary,
+.o_compliance_assessment_form .o_field_statusbar [data-value="blocked"].dropdown-toggle {
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    color: #fff !important;
+}

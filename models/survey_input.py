@@ -5,6 +5,7 @@ import os
 import unicodedata
 
 from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 
 
 _KYC_PF_MAPPING_CACHE = None
@@ -645,4 +646,136 @@ class SurveyUserInput(models.Model):
                     pass
 
         return res
+
+
+class SurveyUserInputLine(models.Model):
+    _inherit = "survey.user_input.line"
+
+    # Forzamos dominio por modelo para que el selector (incluyendo "Buscar más...")
+    # solo muestre respuestas de la pregunta actual.
+    suggested_answer_id = fields.Many2one(
+        "survey.question.answer",
+        domain="[('question_id', '=', question_id)]",
+    )
+
+    @api.onchange("question_id")
+    def _onchange_question_id_domain_suggested_answer(self):
+        """Restringe el dropdown a respuestas de la misma pregunta."""
+        domain = []
+        if self.question_id:
+            domain = [("question_id", "=", self.question_id.id)]
+            if self.suggested_answer_id and self.suggested_answer_id.question_id != self.question_id:
+                self.suggested_answer_id = False
+        return {"domain": {"suggested_answer_id": domain}}
+
+    @api.constrains("question_id", "suggested_answer_id")
+    def _check_suggested_answer_question_match(self):
+        for rec in self:
+            if (
+                rec.suggested_answer_id
+                and rec.question_id
+                and rec.suggested_answer_id.question_id
+                and rec.suggested_answer_id.question_id != rec.question_id
+            ):
+                raise ValidationError(
+                    _(
+                        "La respuesta seleccionada no pertenece a la pregunta actual. "
+                        "Elija una opción de esa misma pregunta."
+                    )
+                )
+
+    def _prepare_vals_unomit_when_answered(self, vals):
+        """Si se coloca una respuesta, quitar estado omitida y normalizar tipo."""
+        new_vals = dict(vals or {})
+        has_answer = False
+        answer_type = new_vals.get("answer_type")
+
+        if new_vals.get("suggested_answer_id"):
+            has_answer = True
+            answer_type = "suggestion"
+        elif "value_text_box" in new_vals and (new_vals.get("value_text_box") or "").strip():
+            has_answer = True
+            answer_type = "text_box"
+        elif "value_char_box" in new_vals and (new_vals.get("value_char_box") or "").strip():
+            has_answer = True
+            answer_type = "char_box"
+        elif "value_numerical_box" in new_vals and new_vals.get("value_numerical_box") is not None:
+            has_answer = True
+            answer_type = "numerical_box"
+        elif "value_date" in new_vals and new_vals.get("value_date"):
+            has_answer = True
+            answer_type = "date"
+        elif "value_datetime" in new_vals and new_vals.get("value_datetime"):
+            has_answer = True
+            answer_type = "datetime"
+
+        if has_answer:
+            if "skipped" in self._fields and "skipped" not in new_vals:
+                new_vals["skipped"] = False
+            if answer_type and "answer_type" in self._fields:
+                new_vals["answer_type"] = answer_type
+        return new_vals
+
+    def _sync_related_assessments(self):
+        """Refresca evaluación KYC tras editar líneas de encuesta."""
+        inputs = self.mapped("user_input_id").filtered(lambda r: r and r.id)
+        if not inputs:
+            return
+        assessments = self.env["compliance.assessment"].sudo().search(
+            [("user_input_id", "in", inputs.ids)]
+        )
+        for assessment in assessments:
+            try:
+                assessment._recompute_scores_from_user_input()
+                assessment._refresh_kyc_raw_json_from_user_input()
+            except Exception:
+                continue
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        rows = [self._prepare_vals_unomit_when_answered(vals) for vals in vals_list]
+        records = super().create(rows)
+        records._sync_related_assessments()
+        return records
+
+    def write(self, vals):
+        result = super().write(self._prepare_vals_unomit_when_answered(vals))
+        self._sync_related_assessments()
+        return result
+
+
+class SurveyQuestionAnswer(models.Model):
+    _inherit = "survey.question.answer"
+
+    @api.model
+    def _domain_from_context_question(self):
+        """Obtiene dominio por pregunta desde contexto del selector M2O."""
+        ctx = self.env.context or {}
+        question_id = ctx.get("question_id") or ctx.get("default_question_id")
+
+        # Si se abre el popup desde una línea de respuesta, usamos su pregunta.
+        if not question_id and ctx.get("active_model") == "survey.user_input.line" and ctx.get("active_id"):
+            line = self.env["survey.user_input.line"].sudo().browse(ctx["active_id"])
+            if line.exists() and line.question_id:
+                question_id = line.question_id.id
+
+        return [("question_id", "=", int(question_id))] if question_id else []
+
+    @api.model
+    def name_search(self, name="", args=None, operator="ilike", limit=100):
+        args = list(args or [])
+        question_domain = self._domain_from_context_question()
+        if question_domain:
+            args += question_domain
+        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+
+    @api.model
+    def search_read(self, domain=None, fields=None, offset=0, limit=None, order=None):
+        domain = list(domain or [])
+        question_domain = self._domain_from_context_question()
+        if question_domain:
+            domain += question_domain
+        return super().search_read(
+            domain=domain, fields=fields, offset=offset, limit=limit, order=order
+        )
 
