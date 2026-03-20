@@ -34,7 +34,6 @@
                     <group>
                         <group string="Factores de riesgo (Cuentagotas)">
                             <field name="profile_id" placeholder="Perfil de umbrales (opcional)..."/>
-                            <field name="form_type"/>
                             <field name="survey_id" placeholder="Encuesta de debida diligencia..."/>
                             <field name="compliance_officer_id" placeholder="Oficial a notificar..."/>
                             <field name="origin_funds_score" string="Riesgo origen de fondos (1-10)" readonly="1"/>

@@ -26,6 +26,13 @@
         'web.assets_backend': [
             'ghr_compliance/static/src/css/kyc_correction_wizard.css',
         ],
+        'web.assets_frontend': [
+            'ghr_compliance/static/src/js/survey_dropdowns.js',
+        ],
+        'survey.survey_assets': [
+            'ghr_compliance/static/src/css/survey_custom.css',
+            'ghr_compliance/static/src/js/survey_dropdowns.js',
+        ],
     },
     'installable': True,
     'application': True,

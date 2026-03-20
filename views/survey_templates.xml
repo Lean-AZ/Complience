@@ -6,4 +6,43 @@
             <t/>
         </xpath>
     </template>
+
+    <!-- Mostrar Nacionalidad como desplegable (en vez de lista de opciones) -->
+    <template id="survey_question_simple_choice_nationality_dropdown" inherit_id="survey.question_simple_choice">
+        <xpath expr="//div[contains(@class,'o_survey_answer_wrapper')]" position="inside">
+            <t t-if="question.title and 'nacionalidad' in question.title.lower()">
+                <div class="col-12 mb-2">
+                    <select class="form-select"
+                            t-att-data-name="question.id"
+                            onchange="(function(sel){var p=sel.closest('[data-question-type]'); if(!p){return;} p.querySelectorAll('input[type=radio]').forEach(function(r){var on=(r.value===sel.value); r.checked=on; if(on){r.dispatchEvent(new Event('change',{bubbles:true})); r.dispatchEvent(new Event('input',{bubbles:true}));}});})(this)">
+                        <option value="">Seleccione una opción</option>
+                        <t t-foreach="question.suggested_answer_ids" t-as="opt">
+                            <t t-set="is_selected_nat" t-value="answer_line and answer_line.suggested_answer_id.id == opt.id"/>
+                            <option t-att-value="opt.id" t-att-selected="'selected' if is_selected_nat else None">
+                                <t t-esc="opt.value"/>
+                            </option>
+                        </t>
+                    </select>
+                </div>
+                <script type="text/javascript">
+                    (function () {
+                        var wrappers = document.querySelectorAll('[data-question-type="simple_choice_radio"]');
+                        wrappers.forEach(function (w) {
+                            var qTitle = w.closest('.js_question-wrapper') &amp;&amp; w.closest('.js_question-wrapper').querySelector('.o_survey_question_title, h1, h2, h3, h4, label');
+                            var txt = (qTitle &amp;&amp; qTitle.textContent || '').toLowerCase();
+                            if (txt.indexOf('nacionalidad') === -1) {
+                                return;
+                            }
+                            w.querySelectorAll('label.o_survey_choice_btn').forEach(function (lbl) {
+                                var col = lbl.closest('div');
+                                if (col) {
+                                    col.style.display = 'none';
+                                }
+                            });
+                        });
+                    })();
+                </script>
+            </t>
+        </xpath>
+    </template>
 </odoo>

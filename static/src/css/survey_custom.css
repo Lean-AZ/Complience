@@ -1,0 +1,127 @@
+/* Tema visual profesional para formularios de Survey (frontend) */
+
+:root {
+    --ghr-primary: #0f4ea5;
+    --ghr-primary-dark: #0b3e84;
+    --ghr-surface: #ffffff;
+    --ghr-text: #0f172a;
+    --ghr-muted: #64748b;
+    --ghr-border: #dbe4f0;
+    --ghr-shadow: 0 12px 28px rgba(15, 23, 42, 0.14);
+}
+
+.o_survey_form,
+.o_survey_layout {
+    background: transparent !important;
+    color: var(--ghr-text);
+}
+
+.o_survey_form .o_survey_title,
+.o_survey_layout .o_survey_title {
+    color: #0f172a;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    margin-bottom: 1rem;
+}
+
+/* Contenedor principal del formulario */
+.o_survey_form .o_survey_form_content,
+.o_survey_layout .o_survey_form_content,
+.o_survey_form .o_container_small,
+.o_survey_layout .o_container_small {
+    background: rgba(255, 255, 255, 0.56);
+    border: 1px solid #d7e2f0;
+    border-radius: 18px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    padding: 0.75rem 0.85rem 1rem;
+}
+
+/* Bloques de preguntas */
+.o_survey_question,
+.o_survey_form .o_survey_question {
+    border: 1px solid #dbe7f6;
+    border-radius: 14px;
+    padding: 16px 16px 12px;
+    background: rgba(255, 255, 255, 0.62);
+    margin-bottom: 12px;
+}
+
+.o_survey_question_title,
+.o_survey_question .o_survey_question_title {
+    font-weight: 700;
+    color: #123d7a;
+    margin-bottom: 0.45rem;
+}
+
+/* Inputs / selects / textareas */
+.o_survey_form input[type="text"],
+.o_survey_form input[type="email"],
+.o_survey_form input[type="number"],
+.o_survey_form input[type="date"],
+.o_survey_form textarea,
+.o_survey_form select {
+    border-radius: 10px !important;
+    border: 1px solid #bcd0ea !important;
+    background: rgba(255, 255, 255, 0.96) !important;
+    box-shadow: none !important;
+    transition: all 0.18s ease;
+}
+
+.o_survey_form input:focus,
+.o_survey_form textarea:focus,
+.o_survey_form select:focus {
+    border-color: var(--ghr-primary) !important;
+    box-shadow: 0 0 0 3px rgba(15, 78, 165, 0.16) !important;
+}
+
+/* Opciones tipo radio/checkbox con look más limpio */
+.o_survey_form .form-check,
+.o_survey_form .o_survey_choice {
+    border: 1px solid #d4deec;
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.o_survey_form .form-check-input:checked {
+    background-color: var(--ghr-primary);
+    border-color: var(--ghr-primary);
+}
+
+/* Botones */
+.o_survey_form .btn-primary,
+.o_survey_layout .btn-primary {
+    background: linear-gradient(135deg, var(--ghr-primary) 0%, #2563eb 100%) !important;
+    border-color: var(--ghr-primary) !important;
+    border-radius: 10px !important;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.o_survey_form .btn-primary:hover,
+.o_survey_layout .btn-primary:hover {
+    background: linear-gradient(135deg, var(--ghr-primary-dark) 0%, #1d4ed8 100%) !important;
+    border-color: var(--ghr-primary-dark) !important;
+}
+
+.o_survey_form .text-muted,
+.o_survey_layout .text-muted {
+    color: var(--ghr-muted) !important;
+}
+
+/* Caja de descripcion inicial con más separación interna */
+.o_survey_form .o_survey_description,
+.o_survey_layout .o_survey_description,
+.o_survey_form .o_survey_form_content .oe_no_empty,
+.o_survey_layout .o_survey_form_content .oe_no_empty {
+    padding: 1rem 1.1rem;
+    line-height: 1.65;
+}
+
+.o_survey_form .o_survey_description p,
+.o_survey_layout .o_survey_description p {
+    margin-bottom: 0.6rem;
+}

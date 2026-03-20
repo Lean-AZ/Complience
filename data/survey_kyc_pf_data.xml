@@ -5,6 +5,7 @@
       <field name="title">KYC Persona Física - Debida Diligencia</field>
       <field name="survey_type">assessment</field>
       <field name="access_mode">public</field>
+      <field name="background_image" type="base64" file="ghr_compliance/Img/IMG ENCUESTA.jpg"/>
       <field name="scoring_type">scoring_without_answers</field>
       <field name="certification" eval="False"/>
       <field name="users_can_go_back" eval="True"/>
