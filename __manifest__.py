@@ -1,14 +1,30 @@
 {
-    'name': 'ah',
+    'name': 'GHR Compliance: Matriz de Riesgo Inteligente',
     'version': '1.0',
     'author': 'Leandro & Rhodetech',
-    'depends': ['base', 'base_setup', 'mail', 'contacts', 'survey'],
+    'depends': ['base', 'base_setup', 'mail', 'contacts', 'survey', 'survey_upload_file'],
+    'post_init_hook': 'ghr_compliance.hooks.post_init_hook',
     'data': [
         'security/ir.model.access.csv',
         'data/compliance_data.xml',
+        'data/add_res_partner_columns.xml',
+        'data/survey_kyc_pf_data.xml',
+        'report/report_compliance_assessment_scoring.xml',
+        'report/report_compliance_validity.xml',
+        'report/report_compliance_kyc_pf.xml',
         'views/compliance_views.xml',
+        'views/compliance_kyc_correction_wizard_views.xml',
+        'views/survey_user_input_views_inherit.xml',
+        'views/compliance_api_config_views.xml',
+        'views/compliance_question_views.xml',
+        'views/res_partner_views.xml',
         'views/res_config_settings_views.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'ghr_compliance/static/src/css/kyc_correction_wizard.css',
+        ],
+    },
     'installable': True,
     'application': True,
 }

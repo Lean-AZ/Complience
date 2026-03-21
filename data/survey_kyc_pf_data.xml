@@ -1,0 +1,1673 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="0">
+    <record id="survey_kyc_pf" model="survey.survey">
+      <field name="title">KYC Persona Física - Debida Diligencia</field>
+      <field name="survey_type">assessment</field>
+      <field name="access_mode">public</field>
+      <field name="users_can_go_back" eval="True"/>
+      <field name="questions_layout">page_per_section</field>
+      <field name="description" type="html"><p>Formulario de debida diligencia para adquirentes e inversionistas. Las respuestas alimentan la matriz de riesgo.</p></field>
+    </record>
+
+    <!-- 1. Datos Generales del Cliente -->
+    <record id="survey_kyc_pf_p1" model="survey.question">
+      <field name="title">1. Datos Generales del Cliente</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">1</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">2</field>
+      <field name="title">Nombres</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">3</field>
+      <field name="title">Apellidos</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">4</field>
+      <field name="title">Sexo</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q3_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q3"/>
+      <field name="sequence">1</field>
+      <field name="value">Masculino</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q3_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q3"/>
+      <field name="sequence">2</field>
+      <field name="value">Femenino</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">5</field>
+      <field name="title">Nombre de la Actividad Económica</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">6</field>
+      <field name="title">Sector (Asalariado)</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q5_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q5"/>
+      <field name="sequence">1</field>
+      <field name="value">Privado</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q5_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q5"/>
+      <field name="sequence">2</field>
+      <field name="value">Público</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">7</field>
+      <field name="title">Estado Civil</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q6"/>
+      <field name="sequence">1</field>
+      <field name="value">Soltero/a</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q6"/>
+      <field name="sequence">2</field>
+      <field name="value">Casado/a</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q6"/>
+      <field name="sequence">3</field>
+      <field name="value">Divorciado/a</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q6"/>
+      <field name="sequence">4</field>
+      <field name="value">Viudo/a</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q6_sug5" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q6"/>
+      <field name="sequence">5</field>
+      <field name="value">Unión libre</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q7" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">8</field>
+      <field name="title">Lugar de Nacimiento</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q8" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">9</field>
+      <field name="title">Fecha de Nacimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">10</field>
+      <field name="title">Nacionalidad</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">1</field>
+      <field name="value">República Dominicana</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">2</field>
+      <field name="value">Estados Unidos</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">3</field>
+      <field name="value">España</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">4</field>
+      <field name="value">México</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug5" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">5</field>
+      <field name="value">Colombia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug6" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">6</field>
+      <field name="value">Argentina</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug7" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">7</field>
+      <field name="value">Chile</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug8" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">8</field>
+      <field name="value">Perú</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug9" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">9</field>
+      <field name="value">Ecuador</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug10" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">10</field>
+      <field name="value">Cuba</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug11" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">11</field>
+      <field name="value">Puerto Rico</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug12" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">12</field>
+      <field name="value">Haití</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug13" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">13</field>
+      <field name="value">Jamaica</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug14" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">14</field>
+      <field name="value">Trinidad y Tobago</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug15" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">15</field>
+      <field name="value">Panamá</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug16" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">16</field>
+      <field name="value">Costa Rica</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug17" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">17</field>
+      <field name="value">Honduras</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug18" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">18</field>
+      <field name="value">El Salvador</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug19" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">19</field>
+      <field name="value">Guatemala</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug20" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">20</field>
+      <field name="value">Nicaragua</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug21" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">21</field>
+      <field name="value">Brasil</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug22" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">22</field>
+      <field name="value">Uruguay</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug23" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">23</field>
+      <field name="value">Paraguay</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug24" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">24</field>
+      <field name="value">Bolivia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug25" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">25</field>
+      <field name="value">Canadá</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug26" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">26</field>
+      <field name="value">Reino Unido</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug27" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">27</field>
+      <field name="value">Francia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug28" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">28</field>
+      <field name="value">Alemania</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug29" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">29</field>
+      <field name="value">Italia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug30" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">30</field>
+      <field name="value">Portugal</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug31" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">31</field>
+      <field name="value">China</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug32" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">32</field>
+      <field name="value">India</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug33" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">33</field>
+      <field name="value">Rusia</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug34" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">34</field>
+      <field name="value">Japón</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug35" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">35</field>
+      <field name="value">Corea del Sur</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug36" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">36</field>
+      <field name="value">Israel</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug37" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">37</field>
+      <field name="value">Suiza</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug38" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">38</field>
+      <field name="value">Países Bajos</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug39" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">39</field>
+      <field name="value">Bélgica</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug40" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">40</field>
+      <field name="value">Venezuela</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug41" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">41</field>
+      <field name="value">Venezuela</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug42" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">42</field>
+      <field name="value">Sudáfrica</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug43" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">43</field>
+      <field name="value">Nigeria</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug44" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">44</field>
+      <field name="value">Egipto</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug45" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">45</field>
+      <field name="value">Marruecos</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug46" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">46</field>
+      <field name="value">Turquía</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug47" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">47</field>
+      <field name="value">Arabia Saudita</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug48" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">48</field>
+      <field name="value">Emiratos Árabes Unidos</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug49" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">49</field>
+      <field name="value">Filipinas</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug50" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">50</field>
+      <field name="value">Indonesia</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug51" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">51</field>
+      <field name="value">Tailandia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug52" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">52</field>
+      <field name="value">Vietnam</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug53" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">53</field>
+      <field name="value">Australia</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug54" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">54</field>
+      <field name="value">Nueva Zelanda</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q9_sug55" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q9"/>
+      <field name="sequence">55</field>
+      <field name="value">Otro</field>
+      <field name="answer_score" eval="6"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q10" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">11</field>
+      <field name="title">Tipo de Documento de Identidad</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q10_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q10"/>
+      <field name="sequence">1</field>
+      <field name="value">Cédula</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q10_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q10"/>
+      <field name="sequence">2</field>
+      <field name="value">Pasaporte</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q11" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">12</field>
+      <field name="title">No. de Documento de Identidad</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q12" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">13</field>
+      <field name="title">Otras Nacionalidades o Residencias</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q12_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q12"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q12_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q12"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q13" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">14</field>
+      <field name="title">¿Residente o Ciudadano EE.UU.?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q13_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q13"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q13_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q13"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="6"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q14" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">15</field>
+      <field name="title">Condición EE.UU.</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q14_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q14"/>
+      <field name="sequence">1</field>
+      <field name="value">Residente</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q14_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q14"/>
+      <field name="sequence">2</field>
+      <field name="value">Ciudadano</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q15" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">16</field>
+      <field name="title">No. Pasaporte Principal</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q16" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">17</field>
+      <field name="title">No. Pasaporte Adicional 1</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q17" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">18</field>
+      <field name="title">No. Pasaporte Adicional 2</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q18" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">19</field>
+      <field name="title">Fecha de Expedición Pasaporte</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q19" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">20</field>
+      <field name="title">Fecha de Vencimiento Pasaporte</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q20" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">21</field>
+      <field name="title">País Emisión Pasaporte</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q21" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">22</field>
+      <field name="title">No. Seguridad Social / TIN (EE.UU.)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q22" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">23</field>
+      <field name="title">Calle de Domicilio</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q23" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">24</field>
+      <field name="title">No. Edificio</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q24" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">25</field>
+      <field name="title">Apartamento / Piso</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q25" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">26</field>
+      <field name="title">País de Domicilio</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q26" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">27</field>
+      <field name="title">Ciudad o Provincia</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q27" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">28</field>
+      <field name="title">Sector (Domicilio)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q28" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">29</field>
+      <field name="title">Teléfono Residencia</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q29" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">30</field>
+      <field name="title">Teléfono Móvil</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q30" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">31</field>
+      <field name="title">Correo Electrónico</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q31" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">32</field>
+      <field name="title">Número Telefónico en EE.UU.</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q32" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">33</field>
+      <field name="title">¿Posee cuentas en EE.UU.?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q32_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q32"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q32_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q32"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q33" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">34</field>
+      <field name="title">¿Cuenta con poder de un US Person?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q33_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q33"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q33_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q33"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q34" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">35</field>
+      <field name="title">¿Recibe/envía transferencias desde/hacia EE.UU.?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q34_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q34"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p1_q34_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p1_q34"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+
+    <!-- 1.1 Información FATCA -->
+    <record id="survey_kyc_pf_p2" model="survey.question">
+      <field name="title">1.1 Información FATCA</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">36</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">37</field>
+      <field name="title">Formulario FATCA</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p2_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">W8</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p2_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">W9</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">38</field>
+      <field name="title">Fecha Formulario W8</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">39</field>
+      <field name="title">Estado o Provincia EE.UU.</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">40</field>
+      <field name="title">Ciudad EE.UU.</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p2_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">41</field>
+      <field name="title">Código Postal EE.UU.</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 1.2 Lugar de Trabajo / Ingresos -->
+    <record id="survey_kyc_pf_p3" model="survey.question">
+      <field name="title">1.2 Lugar de Trabajo / Ingresos</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">42</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">43</field>
+      <field name="title">Origen de los Ingresos</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">Asalariado</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">Jubilado</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q1_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q1"/>
+      <field name="sequence">3</field>
+      <field name="value">Independiente</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q1_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q1"/>
+      <field name="sequence">4</field>
+      <field name="value">Otro</field>
+      <field name="answer_score" eval="6"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">44</field>
+      <field name="title">Nombre de la Empresa / Negocio</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">45</field>
+      <field name="title">Actividad Económica de la Empresa</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">46</field>
+      <field name="title">Cargo u Ocupación</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">47</field>
+      <field name="title">Tiempo en la Empresa (Meses)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">48</field>
+      <field name="title">Tiempo en la Empresa (Años)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q7" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">49</field>
+      <field name="title">Teléfono Empresa</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q8" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">50</field>
+      <field name="title">Región Empresa</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q8_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q8"/>
+      <field name="sequence">1</field>
+      <field name="value">Norte</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q8_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q8"/>
+      <field name="sequence">2</field>
+      <field name="value">Este</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q8_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q8"/>
+      <field name="sequence">3</field>
+      <field name="value">Oeste</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q8_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p3_q8"/>
+      <field name="sequence">4</field>
+      <field name="value">DN</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p3_q9" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">51</field>
+      <field name="title">Dirección Empresa</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 2.1 Referencias Bancarias -->
+    <record id="survey_kyc_pf_p4" model="survey.question">
+      <field name="title">2.1 Referencias Bancarias</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">52</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">53</field>
+      <field name="title">Número de Cuenta (Ref. Bancaria 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">54</field>
+      <field name="title">Tipo de Cuenta (Ref. Bancaria 1)</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q2_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q2"/>
+      <field name="sequence">1</field>
+      <field name="value">Corriente</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q2_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q2"/>
+      <field name="sequence">2</field>
+      <field name="value">Ahorros</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q2_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q2"/>
+      <field name="sequence">3</field>
+      <field name="value">Otro</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">55</field>
+      <field name="title">Moneda (Ref. Bancaria 1)</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q3_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q3"/>
+      <field name="sequence">1</field>
+      <field name="value">DOP</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q3_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q3"/>
+      <field name="sequence">2</field>
+      <field name="value">USD</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q3_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q3"/>
+      <field name="sequence">3</field>
+      <field name="value">EUR</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q3_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p4_q3"/>
+      <field name="sequence">4</field>
+      <field name="value">Otra</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">56</field>
+      <field name="title">Fecha de Apertura (Ref. Bancaria 1)</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">57</field>
+      <field name="title">Entidad Financiera (Ref. Bancaria 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p4_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">58</field>
+      <field name="title">País de Origen (Ref. Bancaria 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 2.2 Referencias Comerciales y Personales -->
+    <record id="survey_kyc_pf_p5" model="survey.question">
+      <field name="title">2.2 Referencias Comerciales y Personales</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">59</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">60</field>
+      <field name="title">Nombre / Empresa (Ref. 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">61</field>
+      <field name="title">Número de Contacto (Ref. 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">62</field>
+      <field name="title">Tipo de Relación (Ref. 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">63</field>
+      <field name="title">Nombre / Empresa (Ref. 2)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">64</field>
+      <field name="title">Número de Contacto (Ref. 2)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p5_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">65</field>
+      <field name="title">Tipo de Relación (Ref. 2)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 2.3 Clientes Principales (Independientes) -->
+    <record id="survey_kyc_pf_p6" model="survey.question">
+      <field name="title">2.3 Clientes Principales (Independientes)</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">66</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p6_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">67</field>
+      <field name="title">Nombre / Empresa (Cliente 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p6_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">68</field>
+      <field name="title">Número de Contacto (Cliente 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 2.4 Proveedores Principales (Independientes) -->
+    <record id="survey_kyc_pf_p7" model="survey.question">
+      <field name="title">2.4 Proveedores Principales (Independientes)</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">69</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p7_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">70</field>
+      <field name="title">Nombre / Empresa (Proveedor 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p7_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">71</field>
+      <field name="title">Número de Contacto (Proveedor 1)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 3. Personas Políticamente Expuestas -->
+    <record id="survey_kyc_pf_p8" model="survey.question">
+      <field name="title">3. Personas Políticamente Expuestas</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">72</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">73</field>
+      <field name="title">¿Es o ha sido PEP o figura pública?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="10"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">74</field>
+      <field name="title">Cargo, Rango o Posición PEP</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">75</field>
+      <field name="title">Fecha desde que ocupa el cargo PEP</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">76</field>
+      <field name="title">Institución PEP</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">77</field>
+      <field name="title">País PEP</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">78</field>
+      <field name="title">¿Tiene vínculo con PEP o figura pública?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q6_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q6"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q6_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q6"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="8"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q7" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">79</field>
+      <field name="title">Nombre de la PEP vinculada</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">80</field>
+      <field name="title">Tipo de Vinculación con PEP</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">1</field>
+      <field name="value">Cónyuge</field>
+      <field name="answer_score" eval="8"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">2</field>
+      <field name="value">Hijo/a</field>
+      <field name="answer_score" eval="7"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">3</field>
+      <field name="value">Hermano/a</field>
+      <field name="answer_score" eval="6"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">4</field>
+      <field name="value">Padre/Madre</field>
+      <field name="answer_score" eval="7"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug5" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">5</field>
+      <field name="value">Socio/a</field>
+      <field name="answer_score" eval="6"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q8_sug6" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p8_q8"/>
+      <field name="sequence">6</field>
+      <field name="value">Otro</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q9" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">81</field>
+      <field name="title">Cargo de la PEP vinculada</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q10" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">82</field>
+      <field name="title">Fecha desde que ocupa cargo (PEP vinculada)</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q11" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">83</field>
+      <field name="title">Institución de la PEP vinculada</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p8_q12" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">84</field>
+      <field name="title">País de la PEP vinculada</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 4.1 Producto e Inversión -->
+    <record id="survey_kyc_pf_p9" model="survey.question">
+      <field name="title">4.1 Producto e Inversión</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">85</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">86</field>
+      <field name="title">Tipo de Adquisición</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p9_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">Inmueble de bajo costo</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p9_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">Inmueble de alto costo</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q1_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p9_q1"/>
+      <field name="sequence">3</field>
+      <field name="value">Otro</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">87</field>
+      <field name="title">Nombre del Fideicomiso</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p9_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">88</field>
+      <field name="title">Monto Global del Bien Adquirido</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 4.2 Transacciones Estimadas -->
+    <record id="survey_kyc_pf_p10" model="survey.question">
+      <field name="title">4.2 Transacciones Estimadas</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">89</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">90</field>
+      <field name="title">Volumen estimado de depósitos/pagos al mes</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p10_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">1-3</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p10_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">3 o más</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">91</field>
+      <field name="title">Canal Transaccional</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q2_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p10_q2"/>
+      <field name="sequence">1</field>
+      <field name="value">Transferencias Locales/Internacionales</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p10_q2_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p10_q2"/>
+      <field name="sequence">2</field>
+      <field name="value">Depósitos en efectivo o cheques</field>
+      <field name="answer_score" eval="4"/>
+    </record>
+
+    <!-- 4.3 Volumen Mensual -->
+    <record id="survey_kyc_pf_p11" model="survey.question">
+      <field name="title">4.3 Volumen Mensual</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">92</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">93</field>
+      <field name="title">Rango monto mensual esperado (DOP)</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">1</field>
+      <field name="value">1-10,000</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">2</field>
+      <field name="value">10,001-100,000</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">3</field>
+      <field name="value">100,001-250,000</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug4" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">4</field>
+      <field name="value">250,001-500,000</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug5" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">5</field>
+      <field name="value">500,001-1,000,000</field>
+      <field name="answer_score" eval="7"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q1_sug6" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q1"/>
+      <field name="sequence">6</field>
+      <field name="value">1,000,001 o más</field>
+      <field name="answer_score" eval="9"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">94</field>
+      <field name="title">Tipo principal de transacciones</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q2_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q2"/>
+      <field name="sequence">1</field>
+      <field name="value">Efectivo</field>
+      <field name="answer_score" eval="3"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q2_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q2"/>
+      <field name="sequence">2</field>
+      <field name="value">Cheque</field>
+      <field name="answer_score" eval="2"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q2_sug3" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q2"/>
+      <field name="sequence">3</field>
+      <field name="value">Transferencia</field>
+      <field name="answer_score" eval="1"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">95</field>
+      <field name="title">¿Realiza transferencias internacionales?</field>
+      <field name="question_type">simple_choice</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q3_sug1" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q3"/>
+      <field name="sequence">1</field>
+      <field name="value">No</field>
+      <field name="answer_score" eval="0"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q3_sug2" model="survey.question.answer">
+      <field name="question_id" ref="survey_kyc_pf_p11_q3"/>
+      <field name="sequence">2</field>
+      <field name="value">Sí</field>
+      <field name="answer_score" eval="5"/>
+    </record>
+    <record id="survey_kyc_pf_p11_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">96</field>
+      <field name="title">País de origen de transferencias internacionales</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 5. Inicial -->
+    <record id="survey_kyc_pf_p12" model="survey.question">
+      <field name="title">5. Inicial</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">97</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p12_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">98</field>
+      <field name="title">Monto de pago inicial (en letras)</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p12_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">99</field>
+      <field name="title">Monto de pago inicial (en números RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 6. Propósito de la Adquisición -->
+    <record id="survey_kyc_pf_p13" model="survey.question">
+      <field name="title">6. Propósito de la Adquisición</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">100</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p13_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">101</field>
+      <field name="title">Propósito de la adquisición o inversión</field>
+      <field name="question_type">text_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 7. Origen de los Fondos -->
+    <record id="survey_kyc_pf_p14" model="survey.question">
+      <field name="title">7. Origen de los Fondos</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">102</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p14_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">103</field>
+      <field name="title">Descripción del origen de los fondos</field>
+      <field name="question_type">text_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 8. Información del Proyecto -->
+    <record id="survey_kyc_pf_p15" model="survey.question">
+      <field name="title">8. Información del Proyecto</field>
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">104</field>
+      <field name="question_type" eval="False"/>
+      <field name="is_page" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">105</field>
+      <field name="title">Nombre del Proyecto</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">106</field>
+      <field name="title">Forma de Pago</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">107</field>
+      <field name="title">Unidad</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q4" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">108</field>
+      <field name="title">Etapa</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q5" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">109</field>
+      <field name="title">Cuota 1 - Monto en letras</field>
+      <field name="question_type">char_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q6" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">110</field>
+      <field name="title">Cuota 1 - Monto en números (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q7" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">111</field>
+      <field name="title">Cuota 2 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q8" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">112</field>
+      <field name="title">Cuota 2 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q9" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">113</field>
+      <field name="title">Cuota 3 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q10" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">114</field>
+      <field name="title">Cuota 3 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q11" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">115</field>
+      <field name="title">Cuota 4 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q12" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">116</field>
+      <field name="title">Cuota 4 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q13" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">117</field>
+      <field name="title">Cuota 5 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q14" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">118</field>
+      <field name="title">Cuota 5 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q15" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">119</field>
+      <field name="title">Cuota 6 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q16" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">120</field>
+      <field name="title">Cuota 6 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q17" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">121</field>
+      <field name="title">Cuota 7 - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q18" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">122</field>
+      <field name="title">Cuota 7 - Fecha de vencimiento</field>
+      <field name="question_type">date</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p15_q19" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">123</field>
+      <field name="title">Pago Final - Monto (RD$)</field>
+      <field name="question_type">numerical_box</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+
+    <!-- 9. Documentos Adjuntos - Persona Física -->
+    <record id="survey_kyc_pf_p16" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">200</field>
+      <field name="title">9. Documentos adjuntos (Persona Física)</field>
+      <field name="is_page" eval="True"/>
+      <field name="question_type" eval="False"/>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q1" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">201</field>
+      <field name="title">Adjunte copia de su documento de identidad vigente (cédula o pasaporte)</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="True"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q2" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">202</field>
+      <field name="title">Si es asalariado, adjunte carta de trabajo; si no lo es, documentos que justifiquen el origen de los fondos</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+    <record id="survey_kyc_pf_p16_q3" model="survey.question">
+      <field name="survey_id" ref="survey_kyc_pf"/>
+      <field name="sequence">203</field>
+      <field name="title">Adjunte estados de cuenta bancarios recientes (últimos 3 meses)</field>
+      <field name="question_type">upload_file</field>
+      <field name="constr_mandatory" eval="False"/>
+    </record>
+  </data>
+</odoo>

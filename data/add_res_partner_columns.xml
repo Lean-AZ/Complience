@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Al actualizar el módulo, asegura que res_partner tenga las columnas de cumplimiento -->
+    <data noupdate="0">
+        <function model="compliance.assessment" name="_ensure_res_partner_columns"/>
+    </data>
+</odoo>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_compliance_validity">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Documento de validez de cumplimiento</h2>
+                        <p>Se certifica que la evaluación de cumplimiento normativo (PLAFT) que se detalla a continuación ha sido revisada y, en su caso, aprobada conforme a los procedimientos internos.</p>
+                        <table class="table table-sm">
+                            <tr><td><strong>Código de evaluación</strong></td><td><t t-esc="o.name"/></td></tr>
+                            <tr><td><strong>Cliente</strong></td><td><t t-esc="o.partner_id.name"/></td></tr>
+                            <tr><td><strong>Estado</strong></td><td><t t-esc="dict(draft='Borrador', ia_process='Investigación IA', review='Revisión', approved='Aprobado', blocked='Bloqueado').get(o.state, o.state)"/></td></tr>
+                            <tr><td><strong>Nivel de riesgo</strong></td><td><t t-esc="dict(low='Bajo', medium='Medio', high='Alto').get(o.risk_level, o.risk_level)"/></td></tr>
+                            <tr><td><strong>Score</strong></td><td><t t-esc="'%.1f' % o.risk_score"/></td></tr>
+                        </table>
+                        <p t-if="o.state == 'approved'">
+                            <strong>Vigencia:</strong> Este documento tiene validez de 12 meses a partir de la fecha de aprobación (configurable en parámetros del sistema: ghr_compliance.validity_months).
+                        </p>
+                        <p><strong>Responsable:</strong> <t t-esc="o.compliance_officer_id.name or o.write_uid.name or '—'"/></p>
+                        <p><strong>Fecha de emisión:</strong> <t t-esc="context_today().strftime('%d/%m/%Y')"/></p>
+                        <hr/>
+                        <p class="text-muted"><small>Documento generado desde el módulo de Compliance. Referencia: <t t-esc="o.name"/>.</small></p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+    <record id="action_report_compliance_validity" model="ir.actions.report">
+        <field name="name">Documento de validez</field>
+        <field name="model">compliance.assessment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">ghr_compliance.report_compliance_validity</field>
+        <field name="report_file">ghr_compliance.report_compliance_validity</field>
+        <field name="print_report_name">'Validez_%s' % (object.name or '')</field>
+    </record>
+</odoo>
