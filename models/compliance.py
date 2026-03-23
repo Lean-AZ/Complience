@@ -8,6 +8,7 @@ import urllib.request
 import urllib.error
 import csv
 import base64
+import unicodedata
 
 from odoo import models, fields, api, _
 from odoo.tools import safe_eval
@@ -1770,6 +1771,158 @@ class ComplianceAssessment(models.Model):
             q = _q(title)
             if q:
                 q.write({trigger_field: [(6, 0, [pep_link_yes.id])]})
+
+        return True
+
+    @api.model
+    def _sync_nationality_answers_data(self):
+        """Sincroniza Nacionalidad con todos los países, orden y score de riesgo."""
+        Question = self.env["survey.question"].sudo()
+        Answer = self.env["survey.question.answer"].sudo()
+        Country = self.env["res.country"].sudo()
+
+        question = self.env.ref("ghr_compliance.survey_kyc_pf_p1_q9", raise_if_not_found=False)
+        if not question:
+            question = Question.search(
+                [
+                    ("survey_id.title", "=", "KYC Persona Física - Debida Diligencia"),
+                    ("is_page", "=", False),
+                    ("title", "=", "Nacionalidad"),
+                ],
+                limit=1,
+            )
+        if not question:
+            return True
+
+        def _norm(txt):
+            raw = (txt or "").strip().lower()
+            return "".join(
+                ch for ch in unicodedata.normalize("NFD", raw) if unicodedata.category(ch) != "Mn"
+            )
+
+        # Base: 3 (medio), con excepciones por código ISO.
+        low_risk_codes = {"DO"}
+        high_risk_codes = {"CU", "HT", "RU", "VE", "NG", "IR", "KP", "SY", "AF", "YE", "MM", "SD", "SS", "BY"}
+        medium_high_risk_codes = {
+            "CN", "IN", "ZA", "EG", "MA", "TR", "SA", "AE", "PH", "ID", "VN", "IL", "HN", "SV", "GT", "NI",
+            "JM", "TT", "PA", "UA", "PK", "IQ", "LY", "DZ", "LB",
+        }
+
+        def _score_for_country(country):
+            code = (country.code or "").upper()
+            if code in low_risk_codes:
+                return 1
+            if code in high_risk_codes:
+                return 5
+            if code in medium_high_risk_codes:
+                return 4
+            return 3
+
+        countries = Country.search([("name", "!=", False)])
+        countries_sorted = sorted(countries, key=lambda c: _norm(c.name))
+
+        existing_answers = Answer.search([("question_id", "=", question.id)], order="sequence asc, id asc")
+        answers_by_norm = {}
+        for ans in existing_answers:
+            answers_by_norm.setdefault(_norm(ans.value), []).append(ans)
+
+        seq = 1
+        used_answer_ids = set()
+        for country in countries_sorted:
+            key = _norm(country.name)
+            pool = answers_by_norm.get(key, [])
+            reuse = next((a for a in pool if a.id not in used_answer_ids), None)
+            vals = {
+                "question_id": question.id,
+                "sequence": seq,
+                "value": country.name,
+                "answer_score": _score_for_country(country),
+            }
+            if reuse:
+                reuse.write(vals)
+                used_answer_ids.add(reuse.id)
+            else:
+                created = Answer.create(vals)
+                used_answer_ids.add(created.id)
+            seq += 1
+
+        # Opción extra final.
+        other_key = _norm("Otro")
+        other_pool = answers_by_norm.get(other_key, [])
+        other_reuse = next((a for a in other_pool if a.id not in used_answer_ids), None)
+        other_vals = {
+            "question_id": question.id,
+            "sequence": seq,
+            "value": "Otro",
+            "answer_score": 6,
+        }
+        if other_reuse:
+            other_reuse.write(other_vals)
+            used_answer_ids.add(other_reuse.id)
+        else:
+            created_other = Answer.create(other_vals)
+            used_answer_ids.add(created_other.id)
+
+        # Mantener históricos al final, sin borrarlos.
+        for ans in existing_answers.filtered(lambda a: a.id not in used_answer_ids):
+            seq += 1
+            ans.write({"sequence": seq})
+
+        return True
+
+    @api.model
+    def _set_kyc_mandatory_rules_data(self):
+        """Marca todo requerido en KYC PF, con exclusiones puntuales solicitadas."""
+        Survey = self.env["survey.survey"].sudo()
+        Question = self.env["survey.question"].sudo()
+
+        survey = Survey.search([("title", "=", "KYC Persona Física - Debida Diligencia")], limit=1)
+        if not survey:
+            return True
+
+        questions = Question.search([("survey_id", "=", survey.id), ("is_page", "=", False)])
+        if not questions:
+            return True
+
+        # 1) Por defecto: todo requerido
+        questions.write({"constr_mandatory": True})
+
+        # 2) Excepciones por pregunta específica
+        exempt_titles = {
+            "Región Empresa",
+            "Teléfono Empresa",
+            "Nombre del Fideicomiso",
+        }
+        questions.filtered(lambda q: q.title in exempt_titles).write({"constr_mandatory": False})
+
+        # 3) Excepciones por secciones completas
+        exempt_section_xmlids = [
+            "ghr_compliance.survey_kyc_pf_p5",  # 2.2 Referencias Comerciales y Personales
+            "ghr_compliance.survey_kyc_pf_p6",  # 2.3 Clientes Principales (Independientes)
+            "ghr_compliance.survey_kyc_pf_p7",  # 2.4 Proveedores Principales (Independientes)
+        ]
+        pages = self.env["survey.question"].browse()
+        for xmlid in exempt_section_xmlids:
+            page = self.env.ref(xmlid, raise_if_not_found=False)
+            if page:
+                pages |= page
+
+        if pages:
+            if "page_id" in Question._fields:
+                Question.search([
+                    ("survey_id", "=", survey.id),
+                    ("is_page", "=", False),
+                    ("page_id", "in", pages.ids),
+                ]).write({"constr_mandatory": False})
+            else:
+                section_titles = {p.title for p in pages}
+                for section_title in section_titles:
+                    if section_title.startswith("2.2 ") or section_title.startswith("2.3 ") or section_title.startswith("2.4 "):
+                        Question.search([
+                            ("survey_id", "=", survey.id),
+                            ("is_page", "=", False),
+                            ("title", "ilike", section_title.split(" ", 1)[-1][:20]),
+                        ]).write({"constr_mandatory": False})
 
         return True
 

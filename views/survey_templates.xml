@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Forzar fondo del survey en todas las pantallas (inicio/en progreso/fin) -->
+    <template id="survey_layout_force_background_image" inherit_id="survey.layout">
+        <xpath expr="//div[@id='wrapwrap']" position="attributes">
+            <attribute name="t-att-style">
+                (('background-image: url(' + question.background_image_url + ');')
+                 if question and question.background_image_url
+                 else ('background-image: url(' + page.background_image_url + ');')
+                 if page and page.background_image_url
+                 else ('background-image: url(' + survey.background_image_url + ');')
+                 if survey and survey.background_image_url
+                 else ('background-image: url(/web/image/survey.survey/%s/background_image);' % survey.id)
+                 if survey
+                 else '') + 'background-size: cover; background-position: center center; background-repeat: no-repeat;'
+            </attribute>
+        </xpath>
+    </template>
+
     <!-- Al finalizar la encuesta no mostrar "aprobado/reprobado" ni score al usuario -->
     <template id="survey_fill_form_done_hide_pass_fail" inherit_id="survey.survey_fill_form_done">
         <xpath expr="//div[@class='row']/div[@class='col']/t[@t-if=&quot;survey.scoring_type != 'no_scoring' and survey.scoring_success_min&quot;]" position="replace">
@@ -19,7 +36,7 @@
                         <t t-foreach="question.suggested_answer_ids" t-as="opt">
                             <t t-set="is_selected_nat" t-value="answer_line and answer_line.suggested_answer_id.id == opt.id"/>
                             <option t-att-value="opt.id" t-att-selected="'selected' if is_selected_nat else None">
-                                <t t-esc="opt.value"/>
+                                <t t-esc="'%s (R%s)' % (opt.value, int(opt.answer_score or 0))"/>
                             </option>
                         </t>
                     </select>

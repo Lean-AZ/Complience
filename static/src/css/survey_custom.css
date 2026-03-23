@@ -16,6 +16,21 @@
     color: var(--ghr-text);
 }
 
+/* Hacer visible la imagen de fondo del patrón de debida diligencia */
+.o_survey_background.o_survey_background_shadow {
+    box-shadow: none !important;
+}
+
+.o_survey_background.o_survey_background_transition {
+    box-shadow: none !important;
+}
+
+/* Fondo visual tipo "debida diligencia" usando la imagen del survey */
+.o_survey_form .o_survey_form_content_data,
+.o_survey_layout .o_survey_form_content_data {
+    border-radius: 18px;
+}
+
 .o_survey_form .o_survey_title,
 .o_survey_layout .o_survey_title {
     color: #0f172a;
@@ -29,23 +44,25 @@
 .o_survey_layout .o_survey_form_content,
 .o_survey_form .o_container_small,
 .o_survey_layout .o_container_small {
-    background: rgba(255, 255, 255, 0.56);
-    border: 1px solid #d7e2f0;
-    border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid #e4ebf5;
+    border-radius: 16px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, 0.12);
     backdrop-filter: blur(5px);
     -webkit-backdrop-filter: blur(5px);
-    padding: 0.75rem 0.85rem 1rem;
+    padding: 0.9rem 1rem 1.1rem;
+    max-width: 760px;
+    margin-inline: auto;
 }
 
 /* Bloques de preguntas */
 .o_survey_question,
 .o_survey_form .o_survey_question {
-    border: 1px solid #dbe7f6;
-    border-radius: 14px;
-    padding: 16px 16px 12px;
-    background: rgba(255, 255, 255, 0.62);
-    margin-bottom: 12px;
+    border: 1px solid #e4ebf5;
+    border-radius: 12px;
+    padding: 14px 14px 10px;
+    background: rgba(255, 255, 255, 0.84);
+    margin-bottom: 10px;
 }
 
 .o_survey_question_title,
@@ -79,11 +96,11 @@
 /* Opciones tipo radio/checkbox con look más limpio */
 .o_survey_form .form-check,
 .o_survey_form .o_survey_choice {
-    border: 1px solid #d4deec;
-    border-radius: 10px;
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #d8e2f0;
+    border-radius: 8px;
+    padding: 7px 10px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.96);
 }
 
 .o_survey_form .form-check-input:checked {

@@ -5,10 +5,10 @@
       <field name="title">KYC Persona Física - Debida Diligencia</field>
       <field name="survey_type">assessment</field>
       <field name="access_mode">public</field>
-      <field name="background_image" type="base64" file="ghr_compliance/Img/IMG ENCUESTA.jpg"/>
+      <field name="background_image" type="base64" file="ghr_compliance/Img/patron_debida_diloigencia.jpg"/>
       <field name="scoring_type">scoring_without_answers</field>
       <field name="certification" eval="False"/>
-      <field name="users_can_go_back" eval="True"/>
+      <field name="users_can_go_back" eval="False"/>
       <field name="questions_layout">page_per_section</field>
       <field name="description" type="html">
         <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.55;">
@@ -1808,5 +1808,9 @@
 
     <!-- Asegurar desencadenantes PEP en cada upgrade (R-15 UI condicional) -->
     <function model="compliance.assessment" name="_configure_pep_trigger_questions_data"/>
+    <!-- Sincronizar Nacionalidad con todos los países y score en cada upgrade -->
+    <function model="compliance.assessment" name="_sync_nationality_answers_data"/>
+    <!-- Todo requerido excepto secciones/preguntas excluidas por negocio -->
+    <function model="compliance.assessment" name="_set_kyc_mandatory_rules_data"/>
   </data>
 </odoo>
