@@ -8,6 +8,26 @@ function normalize(text) {
         .trim();
 }
 
+function stripRiskSuffix(text) {
+    return (text || "").replace(/\s*\(R\d+\)\s*$/i, "").trim();
+}
+
+function sanitizeRiskLabels() {
+    document.querySelectorAll(".o_survey_form select option").forEach((opt) => {
+        const cleaned = stripRiskSuffix(opt.textContent || "");
+        if (cleaned && cleaned !== opt.textContent) {
+            opt.textContent = cleaned;
+        }
+    });
+
+    document.querySelectorAll(".o_survey_form label.o_survey_choice_btn span.ms-2.text-break").forEach((span) => {
+        const cleaned = stripRiskSuffix(span.textContent || "");
+        if (cleaned && cleaned !== span.textContent) {
+            span.textContent = cleaned;
+        }
+    });
+}
+
 function enhanceNationalityAsDropdown() {
     const questionBlocks = document.querySelectorAll(
         ".o_survey_answer_wrapper[data-question-type='simple_choice_radio']"
@@ -54,7 +74,7 @@ function enhanceNationalityAsDropdown() {
                 return;
             }
             const textSpan = label.querySelector("span.ms-2.text-break");
-            const labelText = (textSpan ? textSpan.textContent : label.textContent || "").trim();
+            const labelText = stripRiskSuffix((textSpan ? textSpan.textContent : label.textContent || "").trim());
             if (!labelText) {
                 return;
             }
@@ -99,8 +119,12 @@ function enhanceNationalityAsDropdown() {
 }
 
 function boot() {
+    sanitizeRiskLabels();
     enhanceNationalityAsDropdown();
-    const observer = new MutationObserver(() => enhanceNationalityAsDropdown());
+    const observer = new MutationObserver(() => {
+        sanitizeRiskLabels();
+        enhanceNationalityAsDropdown();
+    });
     observer.observe(document.body, { childList: true, subtree: true });
 }
 

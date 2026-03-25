@@ -36,7 +36,7 @@
                         <t t-foreach="question.suggested_answer_ids" t-as="opt">
                             <t t-set="is_selected_nat" t-value="answer_line and answer_line.suggested_answer_id.id == opt.id"/>
                             <option t-att-value="opt.id" t-att-selected="'selected' if is_selected_nat else None">
-                                <t t-esc="'%s (R%s)' % (opt.value, int(opt.answer_score or 0))"/>
+                                <t t-esc="opt.value"/>
                             </option>
                         </t>
                     </select>

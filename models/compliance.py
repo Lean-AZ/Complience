@@ -1892,6 +1892,7 @@ class ComplianceAssessment(models.Model):
             "Región Empresa",
             "Teléfono Empresa",
             "Nombre del Fideicomiso",
+            "No. Pasaporte Adicional 2",
         }
         questions.filtered(lambda q: q.title in exempt_titles).write({"constr_mandatory": False})
 
